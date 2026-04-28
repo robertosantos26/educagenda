@@ -133,16 +133,20 @@ export default function TurmasPage() {
           <ul style={{ paddingLeft: 0, listStyle: "none" }}>
             {classes.map((item) => (
               <li
-                key={item.id}
-                style={{
-                  padding: 16,
-                  border: "1px solid #ddd",
-                  borderRadius: 8,
-                  marginBottom: 12,
-                }}
-              >
-                <strong>{item.name}</strong>
-              </li>
+  key={item.id}
+  style={{
+    padding: 16,
+    border: "1px solid #ddd",
+    borderRadius: 8,
+    marginBottom: 12,
+  }}
+>
+  <strong>{item.name}</strong>
+  <br />
+  <a href={`/dashboard/turmas/${item.id}`} style={{ color: "#2563eb" }}>
+    Ver crianças da turma
+  </a>
+</li>
             ))}
           </ul>
         )}
