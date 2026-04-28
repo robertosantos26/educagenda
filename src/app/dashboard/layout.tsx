@@ -19,6 +19,7 @@ export default function DashboardLayout({
         <Link href="/dashboard/turmas">Turmas</Link>
         <Link href="/dashboard/criancas">Crianças</Link>
         <Link href="/dashboard/professores">Professores</Link>
+        <Link href="/dashboard/agenda">Agenda</Link>
       </nav>
 
       <main style={{ padding: 32 }}>{children}</main>
