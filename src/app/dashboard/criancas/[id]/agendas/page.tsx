@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
@@ -23,20 +24,21 @@ type Report = {
   created_at: string;
 };
 
-export default function AgendasCriancaPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function AgendasCriancaPage() {
+  const params = useParams();
+  const studentId = params.id as string;
+
   const [student, setStudent] = useState<Student | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [message, setMessage] = useState("");
 
   async function loadStudent() {
+    if (!studentId) return;
+
     const { data, error } = await supabase
       .from("students")
       .select("id, name, class_id")
-      .eq("id", params.id)
+      .eq("id", studentId)
       .single();
 
     if (error) {
@@ -48,12 +50,14 @@ export default function AgendasCriancaPage({
   }
 
   async function loadReports() {
+    if (!studentId) return;
+
     const { data, error } = await supabase
       .from("daily_reports")
       .select(
         "id, report_date, food, sleep, bathroom, mood, activities, observations, message_to_parents, created_at"
       )
-      .eq("student_id", params.id)
+      .eq("student_id", studentId)
       .order("report_date", { ascending: false });
 
     if (error) {
@@ -65,9 +69,11 @@ export default function AgendasCriancaPage({
   }
 
   useEffect(() => {
-    loadStudent();
-    loadReports();
-  }, []);
+    if (studentId) {
+      loadStudent();
+      loadReports();
+    }
+  }, [studentId]);
 
   return (
     <div style={{ maxWidth: 900 }}>
