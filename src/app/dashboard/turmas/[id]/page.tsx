@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
@@ -15,20 +16,21 @@ type ClassItem = {
   name: string;
 };
 
-export default function TurmaDetalhePage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function TurmaDetalhePage() {
+  const params = useParams();
+  const turmaId = params.id as string;
+
   const [turma, setTurma] = useState<ClassItem | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [message, setMessage] = useState("");
 
   async function loadTurma() {
+    if (!turmaId) return;
+
     const { data, error } = await supabase
       .from("classes")
       .select("id, name")
-      .eq("id", params.id)
+      .eq("id", turmaId)
       .single();
 
     if (error) {
@@ -40,10 +42,12 @@ export default function TurmaDetalhePage({
   }
 
   async function loadStudents() {
+    if (!turmaId) return;
+
     const { data, error } = await supabase
       .from("students")
       .select("id, name, birth_date")
-      .eq("class_id", params.id)
+      .eq("class_id", turmaId)
       .eq("active", true)
       .order("name", { ascending: true });
 
@@ -56,9 +60,11 @@ export default function TurmaDetalhePage({
   }
 
   useEffect(() => {
-    loadTurma();
-    loadStudents();
-  }, []);
+    if (turmaId) {
+      loadTurma();
+      loadStudents();
+    }
+  }, [turmaId]);
 
   return (
     <div style={{ maxWidth: 900 }}>
