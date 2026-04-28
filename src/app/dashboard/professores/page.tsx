@@ -8,7 +8,8 @@ type Teacher = {
   name: string;
   email: string | null;
   phone: string | null;
-  created_at: string;
+  access_created: boolean;
+  auth_user_id: string | null;
 };
 
 type ClassItem = {
@@ -16,20 +17,15 @@ type ClassItem = {
   name: string;
 };
 
-type TeacherClassLink = {
-  teacher_id: string;
-  class_id: string;
-};
-
 export default function ProfessoresPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [links, setLinks] = useState<TeacherClassLink[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -54,144 +50,109 @@ export default function ProfessoresPage() {
     const schoolId = await getSchoolId();
     if (!schoolId) return;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("classes")
       .select("id, name")
-      .eq("school_id", schoolId)
-      .order("name", { ascending: true });
-
-    if (error) {
-      setMessage("Erro ao carregar turmas: " + error.message);
-      return;
-    }
+      .eq("school_id", schoolId);
 
     setClasses(data || []);
   }
 
   async function loadTeachers() {
     const schoolId = await getSchoolId();
+    if (!schoolId) return;
 
-    if (!schoolId) {
-      setMessage("Não encontrei a escola vinculada ao usuário.");
-      return;
-    }
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("teachers")
-      .select("id, name, email, phone, created_at")
-      .eq("school_id", schoolId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setMessage("Erro ao carregar professores: " + error.message);
-      return;
-    }
+      .select("id, name, email, phone, access_created, auth_user_id")
+      .eq("school_id", schoolId);
 
     setTeachers(data || []);
   }
 
-  async function loadLinks() {
-    const { data, error } = await supabase
-      .from("teacher_class_links")
-      .select("teacher_id, class_id");
-
-    if (error) {
-      setMessage("Erro ao carregar vínculos: " + error.message);
-      return;
-    }
-
-    setLinks(data || []);
-  }
-
   function toggleClass(classId: string) {
-    setSelectedClasses((current) =>
-      current.includes(classId)
-        ? current.filter((id) => id !== classId)
-        : [...current, classId]
+    setSelectedClasses((prev) =>
+      prev.includes(classId)
+        ? prev.filter((id) => id !== classId)
+        : [...prev, classId]
     );
   }
 
   async function createTeacher() {
     setMessage("");
 
-    if (!name.trim()) {
-      setMessage("Digite o nome do professor.");
+    if (!name || !email) {
+      setMessage("Nome e email são obrigatórios.");
       return;
     }
-
-    if (selectedClasses.length === 0) {
-      setMessage("Selecione pelo menos uma turma para o professor.");
-      return;
-    }
-
-    setLoading(true);
 
     const schoolId = await getSchoolId();
-
-    if (!schoolId) {
-      setMessage("Não encontrei a escola vinculada ao usuário.");
-      setLoading(false);
-      return;
-    }
 
     const { data: teacher, error } = await supabase
       .from("teachers")
       .insert({
+        name,
+        email,
+        phone,
         school_id: schoolId,
-        name: name.trim(),
-        email: email.trim() || null,
-        phone: phone.trim() || null,
       })
-      .select("id")
+      .select()
       .single();
 
     if (error || !teacher) {
-      setMessage("Erro ao cadastrar professor: " + (error?.message || ""));
-      setLoading(false);
+      setMessage("Erro ao cadastrar professor.");
       return;
     }
 
-    const teacherLinks = selectedClasses.map((classId) => ({
-      teacher_id: teacher.id,
-      class_id: classId,
-    }));
+    if (selectedClasses.length > 0) {
+      const links = selectedClasses.map((classId) => ({
+        teacher_id: teacher.id,
+        class_id: classId,
+      }));
 
-    const { error: linkError } = await supabase
-      .from("teacher_class_links")
-      .insert(teacherLinks);
-
-    if (linkError) {
-      setMessage("Professor criado, mas houve erro ao vincular turmas: " + linkError.message);
-      setLoading(false);
-      return;
+      await supabase.from("teacher_class_links").insert(links);
     }
 
     setName("");
     setEmail("");
     setPhone("");
     setSelectedClasses([]);
-    setMessage("Professor cadastrado com sucesso.");
 
-    await loadTeachers();
-    await loadLinks();
-
-    setLoading(false);
+    setMessage("Professor cadastrado.");
+    loadTeachers();
   }
 
-  function getTeacherClasses(teacherId: string) {
-    const teacherLinks = links.filter((link) => link.teacher_id === teacherId);
+  async function createAccess(teacherId: string) {
+    setMessage("");
 
-    const names = teacherLinks
-      .map((link) => classes.find((item) => item.id === link.class_id)?.name)
-      .filter(Boolean);
+    if (!password) {
+      setMessage("Informe uma senha provisória.");
+      return;
+    }
 
-    return names.length > 0 ? names.join(", ") : "Nenhuma turma vinculada";
+    const response = await fetch("/api/create-teacher-auth", {
+      method: "POST",
+      body: JSON.stringify({
+        teacherId,
+        password,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setMessage(result.error);
+      return;
+    }
+
+    setMessage("Acesso criado com sucesso.");
+    setPassword("");
+    loadTeachers();
   }
 
   useEffect(() => {
     loadClasses();
     loadTeachers();
-    loadLinks();
   }, []);
 
   return (
@@ -202,121 +163,106 @@ export default function ProfessoresPage() {
         <h2>Cadastrar professor</h2>
 
         <input
-          type="text"
-          placeholder="Nome do professor"
+          placeholder="Nome"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={inputStyle}
+          style={input}
         />
 
-        <br />
-
         <input
-          type="email"
-          placeholder="E-mail"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={inputStyle}
+          style={input}
         />
 
-        <br />
-
         <input
-          type="text"
           placeholder="Telefone"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          style={inputStyle}
+          style={input}
         />
 
-        <div style={{ marginTop: 16, marginBottom: 16 }}>
-          <strong>Turmas do professor</strong>
-
-          {classes.length === 0 ? (
-            <p>Nenhuma turma cadastrada ainda.</p>
-          ) : (
-            <div style={{ marginTop: 10 }}>
-              {classes.map((item) => (
-                <label
-                  key={item.id}
-                  style={{
-                    display: "block",
-                    marginBottom: 8,
-                    cursor: "pointer",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedClasses.includes(item.id)}
-                    onChange={() => toggleClass(item.id)}
-                    style={{ marginRight: 8 }}
-                  />
-                  {item.name}
-                </label>
-              ))}
-            </div>
-          )}
+        <div>
+          <strong>Turmas</strong>
+          {classes.map((c) => (
+            <label key={c.id} style={{ display: "block" }}>
+              <input
+                type="checkbox"
+                onChange={() => toggleClass(c.id)}
+                checked={selectedClasses.includes(c.id)}
+              />
+              {c.name}
+            </label>
+          ))}
         </div>
 
-        <button
-          onClick={createTeacher}
-          disabled={loading || classes.length === 0}
-          style={{
-            padding: "12px 20px",
-            borderRadius: 8,
-            border: "none",
-            cursor: loading || classes.length === 0 ? "not-allowed" : "pointer",
-            background: loading || classes.length === 0 ? "#9ca3af" : "#111827",
-            color: "white",
-            marginTop: 12,
-          }}
-        >
-          {loading ? "Salvando..." : "Cadastrar"}
+        <button onClick={createTeacher} style={button}>
+          Cadastrar professor
         </button>
 
-        {message && <p style={{ marginTop: 16 }}>{message}</p>}
+        {message && <p>{message}</p>}
       </section>
 
       <section style={{ marginTop: 40 }}>
-        <h2>Professores cadastrados</h2>
+        <h2>Professores</h2>
 
-        {teachers.length === 0 ? (
-          <p>Nenhum professor cadastrado ainda.</p>
-        ) : (
-          <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-            {teachers.map((teacher) => (
-              <li
-                key={teacher.id}
-                style={{
-                  padding: 16,
-                  border: "1px solid #ddd",
-                  borderRadius: 8,
-                  marginBottom: 12,
-                }}
-              >
-                <strong>{teacher.name}</strong>
-                <br />
-                <span>{teacher.email || "Sem e-mail"}</span>
-                <br />
-                <span>{teacher.phone || "Sem telefone"}</span>
-                <br />
-                <span>
-                  <strong>Turmas:</strong> {getTeacherClasses(teacher.id)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        {teachers.map((teacher) => (
+          <div key={teacher.id} style={card}>
+            <strong>{teacher.name}</strong>
+            <br />
+            {teacher.email}
+            <br />
+
+            <p>
+              Status:{" "}
+              {teacher.access_created ? "Acesso criado" : "Sem acesso"}
+            </p>
+
+            {!teacher.access_created && (
+              <>
+                <input
+                  placeholder="Senha provisória"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={input}
+                />
+
+                <button
+                  onClick={() => createAccess(teacher.id)}
+                  style={button}
+                >
+                  Criar acesso
+                </button>
+              </>
+            )}
+          </div>
+        ))}
       </section>
     </div>
   );
 }
 
-const inputStyle = {
-  padding: 12,
+const input = {
+  display: "block",
+  marginBottom: 10,
+  padding: 10,
   width: "100%",
   maxWidth: 400,
-  border: "1px solid #ccc",
-  borderRadius: 8,
+};
+
+const button = {
+  padding: 10,
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  borderRadius: 6,
+  cursor: "pointer",
+};
+
+const card = {
+  border: "1px solid #ddd",
+  padding: 16,
   marginBottom: 12,
+  borderRadius: 8,
 };
