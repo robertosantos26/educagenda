@@ -15,16 +15,38 @@ export default function ProfessoresPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function loadTeachers() {
-    const { data, error } = await supabase
+  async function getSchoolId() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return null;
+
+    const { data: profile } = await supabase
       .from("profiles")
+      .select("school_id")
+      .eq("id", user.id)
+      .single();
+
+    return profile?.school_id || null;
+  }
+
+  async function loadTeachers() {
+    const schoolId = await getSchoolId();
+
+    if (!schoolId) {
+      setMessage("Não encontrei a escola vinculada ao usuário.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("teachers")
       .select("id, name, email, phone, created_at")
-      .eq("role", "teacher")
+      .eq("school_id", schoolId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -45,38 +67,19 @@ export default function ProfessoresPage() {
 
     setLoading(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const schoolId = await getSchoolId();
 
-    if (!user) {
-      setMessage("Usuário não autenticado.");
-      setLoading(false);
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("school_id")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.school_id) {
+    if (!schoolId) {
       setMessage("Não encontrei a escola vinculada ao usuário.");
       setLoading(false);
       return;
     }
 
-    const fakeUserId = crypto.randomUUID();
-
-    const { error } = await supabase.from("profiles").insert({
-      id: fakeUserId,
-      school_id: profile.school_id,
+    const { error } = await supabase.from("teachers").insert({
+      school_id: schoolId,
       name: name.trim(),
       email: email.trim() || null,
       phone: phone.trim() || null,
-      role: "teacher",
-      active: true,
     });
 
     if (error) {
@@ -90,7 +93,6 @@ export default function ProfessoresPage() {
     setPhone("");
     setMessage("Professor cadastrado com sucesso.");
     await loadTeachers();
-
     setLoading(false);
   }
 
@@ -110,14 +112,7 @@ export default function ProfessoresPage() {
           placeholder="Nome do professor"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{
-            padding: 12,
-            width: "100%",
-            maxWidth: 400,
-            border: "1px solid #ccc",
-            borderRadius: 8,
-            marginBottom: 12,
-          }}
+          style={{ padding: 12, width: "100%", maxWidth: 400, border: "1px solid #ccc", borderRadius: 8, marginBottom: 12 }}
         />
 
         <br />
@@ -127,14 +122,7 @@ export default function ProfessoresPage() {
           placeholder="E-mail"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{
-            padding: 12,
-            width: "100%",
-            maxWidth: 400,
-            border: "1px solid #ccc",
-            borderRadius: 8,
-            marginBottom: 12,
-          }}
+          style={{ padding: 12, width: "100%", maxWidth: 400, border: "1px solid #ccc", borderRadius: 8, marginBottom: 12 }}
         />
 
         <br />
@@ -144,13 +132,7 @@ export default function ProfessoresPage() {
           placeholder="Telefone"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          style={{
-            padding: 12,
-            width: "100%",
-            maxWidth: 400,
-            border: "1px solid #ccc",
-            borderRadius: 8,
-          }}
+          style={{ padding: 12, width: "100%", maxWidth: 400, border: "1px solid #ccc", borderRadius: 8 }}
         />
 
         <br />
@@ -158,15 +140,7 @@ export default function ProfessoresPage() {
         <button
           onClick={createTeacher}
           disabled={loading}
-          style={{
-            padding: "12px 20px",
-            borderRadius: 8,
-            border: "none",
-            cursor: "pointer",
-            background: "#111827",
-            color: "white",
-            marginTop: 12,
-          }}
+          style={{ padding: "12px 20px", borderRadius: 8, border: "none", cursor: "pointer", background: "#111827", color: "white", marginTop: 12 }}
         >
           {loading ? "Salvando..." : "Cadastrar"}
         </button>
@@ -182,15 +156,7 @@ export default function ProfessoresPage() {
         ) : (
           <ul style={{ paddingLeft: 0, listStyle: "none" }}>
             {teachers.map((teacher) => (
-              <li
-                key={teacher.id}
-                style={{
-                  padding: 16,
-                  border: "1px solid #ddd",
-                  borderRadius: 8,
-                  marginBottom: 12,
-                }}
-              >
+              <li key={teacher.id} style={{ padding: 16, border: "1px solid #ddd", borderRadius: 8, marginBottom: 12 }}>
                 <strong>{teacher.name}</strong>
                 <br />
                 <span>{teacher.email || "Sem e-mail"}</span>
