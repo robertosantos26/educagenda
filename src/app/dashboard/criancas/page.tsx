@@ -13,9 +13,6 @@ type Student = {
   name: string;
   birth_date: string | null;
   class_id: string | null;
-  classes?: {
-    name: string;
-  }[] | null;
 };
 
 export default function CriancasPage() {
@@ -30,65 +27,42 @@ export default function CriancasPage() {
   const [message, setMessage] = useState("");
 
   async function getSchoolId() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data: profile, error } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("school_id")
       .eq("id", user.id)
       .single();
 
-    if (error || !profile?.school_id) return null;
-
-    return profile.school_id;
+    return profile?.school_id || null;
   }
 
   async function loadClasses() {
     const schoolId = await getSchoolId();
+    if (!schoolId) return;
 
-    if (!schoolId) {
-      setMessage("Não encontrei a escola vinculada ao usuário.");
-      return;
-    }
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("classes")
       .select("id, name")
       .eq("school_id", schoolId)
       .order("name", { ascending: true });
-
-    if (error) {
-      setMessage("Erro ao carregar turmas: " + error.message);
-      return;
-    }
 
     setClasses(data || []);
   }
 
   async function loadStudents() {
     const schoolId = await getSchoolId();
+    if (!schoolId) return;
 
-    if (!schoolId) {
-      setMessage("Não encontrei a escola vinculada ao usuário.");
-      return;
-    }
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("students")
-      .select("id, name, birth_date, class_id, classes(name)")
+      .select("id, name, birth_date, class_id")
       .eq("school_id", schoolId)
       .order("name", { ascending: true });
 
-    if (error) {
-      setMessage("Erro ao carregar crianças: " + error.message);
-      return;
-    }
-
-    setStudents((data || []) as Student[]);
+    setStudents(data || []);
   }
 
   async function createStudent() {
@@ -100,19 +74,13 @@ export default function CriancasPage() {
     }
 
     if (!classId) {
-      setMessage("Selecione uma turma já cadastrada.");
+      setMessage("Selecione uma turma.");
       return;
     }
 
     setLoading(true);
 
     const schoolId = await getSchoolId();
-
-    if (!schoolId) {
-      setMessage("Não encontrei a escola vinculada ao usuário.");
-      setLoading(false);
-      return;
-    }
 
     const { error } = await supabase.from("students").insert({
       school_id: schoolId,
@@ -134,7 +102,6 @@ export default function CriancasPage() {
     setMessage("Criança cadastrada com sucesso.");
 
     await loadStudents();
-
     setLoading(false);
   }
 
@@ -155,14 +122,7 @@ export default function CriancasPage() {
           placeholder="Nome da criança"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{
-            padding: 12,
-            width: "100%",
-            maxWidth: 400,
-            border: "1px solid #ccc",
-            borderRadius: 8,
-            marginBottom: 12,
-          }}
+          style={{ padding: 12, width: "100%", maxWidth: 400, border: "1px solid #ccc", borderRadius: 8, marginBottom: 12 }}
         />
 
         <br />
@@ -171,14 +131,7 @@ export default function CriancasPage() {
           type="date"
           value={birthDate}
           onChange={(e) => setBirthDate(e.target.value)}
-          style={{
-            padding: 12,
-            width: "100%",
-            maxWidth: 400,
-            border: "1px solid #ccc",
-            borderRadius: 8,
-            marginBottom: 12,
-          }}
+          style={{ padding: 12, width: "100%", maxWidth: 400, border: "1px solid #ccc", borderRadius: 8, marginBottom: 12 }}
         />
 
         <br />
@@ -186,30 +139,15 @@ export default function CriancasPage() {
         <select
           value={classId}
           onChange={(e) => setClassId(e.target.value)}
-          required
-          style={{
-            padding: 12,
-            width: "100%",
-            maxWidth: 400,
-            border: "1px solid #ccc",
-            borderRadius: 8,
-            marginBottom: 12,
-          }}
+          style={{ padding: 12, width: "100%", maxWidth: 400, border: "1px solid #ccc", borderRadius: 8, marginBottom: 12 }}
         >
           <option value="">Selecione uma turma cadastrada</option>
-
           {classes.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
             </option>
           ))}
         </select>
-
-        {classes.length === 0 && (
-          <p style={{ color: "#b45309", marginTop: 4 }}>
-            Nenhuma turma cadastrada. Cadastre uma turma antes de adicionar crianças.
-          </p>
-        )}
 
         <br />
 
@@ -239,23 +177,27 @@ export default function CriancasPage() {
           <p>Nenhuma criança cadastrada ainda.</p>
         ) : (
           <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-            {students.map((student) => (
-              <li
-                key={student.id}
-                style={{
-                  padding: 16,
-                  border: "1px solid #ddd",
-                  borderRadius: 8,
-                  marginBottom: 12,
-                }}
-              >
-                <strong>{student.name}</strong>
-                <br />
-                <span>Turma: {student.classes?.[0]?.name || "Sem turma"}</span>
-                <br />
-                <span>Nascimento: {student.birth_date || "Não informado"}</span>
-              </li>
-            ))}
+            {students.map((student) => {
+              const turma = classes.find((c) => c.id === student.class_id);
+
+              return (
+                <li
+                  key={student.id}
+                  style={{
+                    padding: 16,
+                    border: "1px solid #ddd",
+                    borderRadius: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  <strong>{student.name}</strong>
+                  <br />
+                  <span>Turma: {turma?.name || "Sem turma"}</span>
+                  <br />
+                  <span>Nascimento: {student.birth_date || "Não informado"}</span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
