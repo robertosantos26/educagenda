@@ -15,7 +15,7 @@ type Student = {
   class_id: string | null;
   classes?: {
     name: string;
-  } | null;
+  }[] | null;
 };
 
 export default function CriancasPage() {
@@ -36,13 +36,15 @@ export default function CriancasPage() {
 
     if (!user) return null;
 
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from("profiles")
       .select("school_id")
       .eq("id", user.id)
       .single();
 
-    return profile?.school_id || null;
+    if (error || !profile?.school_id) return null;
+
+    return profile.school_id;
   }
 
   async function loadClasses() {
@@ -86,7 +88,7 @@ export default function CriancasPage() {
       return;
     }
 
-    setStudents(data || []);
+    setStudents((data || []) as Student[]);
   }
 
   async function createStudent() {
@@ -98,7 +100,7 @@ export default function CriancasPage() {
     }
 
     if (!classId) {
-      setMessage("Selecione uma turma.");
+      setMessage("Selecione uma turma já cadastrada.");
       return;
     }
 
@@ -130,6 +132,7 @@ export default function CriancasPage() {
     setBirthDate("");
     setClassId("");
     setMessage("Criança cadastrada com sucesso.");
+
     await loadStudents();
 
     setLoading(false);
@@ -183,6 +186,7 @@ export default function CriancasPage() {
         <select
           value={classId}
           onChange={(e) => setClassId(e.target.value)}
+          required
           style={{
             padding: 12,
             width: "100%",
@@ -192,7 +196,8 @@ export default function CriancasPage() {
             marginBottom: 12,
           }}
         >
-          <option value="">Selecione a turma</option>
+          <option value="">Selecione uma turma cadastrada</option>
+
           {classes.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
@@ -200,17 +205,23 @@ export default function CriancasPage() {
           ))}
         </select>
 
+        {classes.length === 0 && (
+          <p style={{ color: "#b45309", marginTop: 4 }}>
+            Nenhuma turma cadastrada. Cadastre uma turma antes de adicionar crianças.
+          </p>
+        )}
+
         <br />
 
         <button
           onClick={createStudent}
-          disabled={loading}
+          disabled={loading || classes.length === 0}
           style={{
             padding: "12px 20px",
             borderRadius: 8,
             border: "none",
-            cursor: "pointer",
-            background: "#111827",
+            cursor: loading || classes.length === 0 ? "not-allowed" : "pointer",
+            background: loading || classes.length === 0 ? "#9ca3af" : "#111827",
             color: "white",
             marginTop: 12,
           }}
@@ -240,13 +251,9 @@ export default function CriancasPage() {
               >
                 <strong>{student.name}</strong>
                 <br />
-                <span>
-                  Turma: {student.classes?.name || "Sem turma"}
-                </span>
+                <span>Turma: {student.classes?.[0]?.name || "Sem turma"}</span>
                 <br />
-                <span>
-                  Nascimento: {student.birth_date || "Não informado"}
-                </span>
+                <span>Nascimento: {student.birth_date || "Não informado"}</span>
               </li>
             ))}
           </ul>
