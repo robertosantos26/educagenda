@@ -7,6 +7,12 @@ type Student = {
   id: string;
   name: string;
   school_id: string;
+  class_id: string | null;
+};
+
+type ClassItem = {
+  id: string;
+  name: string;
 };
 
 type Report = {
@@ -23,12 +29,18 @@ type Report = {
 
 export default function MeuFilhoPage() {
   const [student, setStudent] = useState<Student | null>(null);
+  const [className, setClassName] = useState("");
   const [reports, setReports] = useState<Report[]>([]);
   const [parentMessage, setParentMessage] = useState("");
   const [message, setMessage] = useState("");
+  const [loadingMessage, setLoadingMessage] = useState(false);
 
   async function loadChild() {
-    const { data: { user } } = await supabase.auth.getUser();
+    setMessage("");
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       setMessage("Usuário não autenticado.");
@@ -37,7 +49,7 @@ export default function MeuFilhoPage() {
 
     const { data: link, error } = await supabase
       .from("student_guardians")
-      .select("students(id, name, school_id)")
+      .select("students(id, name, school_id, class_id)")
       .eq("guardian_id", user.id)
       .single();
 
@@ -46,18 +58,43 @@ export default function MeuFilhoPage() {
       return;
     }
 
-    const child = (link as any).students;
+    const child = (link as any).students as Student;
 
     setStudent(child);
+
+    await loadClass(child.class_id);
     await loadReports(child.id);
   }
 
-  async function loadReports(studentId: string) {
+  async function loadClass(classId: string | null) {
+    if (!classId) {
+      setClassName("Sem turma");
+      return;
+    }
+
     const { data } = await supabase
+      .from("classes")
+      .select("id, name")
+      .eq("id", classId)
+      .single();
+
+    const turma = data as ClassItem | null;
+    setClassName(turma?.name || "Sem turma");
+  }
+
+  async function loadReports(studentId: string) {
+    const { data, error } = await supabase
       .from("daily_reports")
-      .select("id, report_date, food, sleep, bathroom, mood, activities, observations, message_to_parents")
+      .select(
+        "id, report_date, food, sleep, bathroom, mood, activities, observations, message_to_parents"
+      )
       .eq("student_id", studentId)
       .order("report_date", { ascending: false });
+
+    if (error) {
+      setMessage("Erro ao carregar agendas: " + error.message);
+      return;
+    }
 
     setReports(data || []);
   }
@@ -71,14 +108,19 @@ export default function MeuFilhoPage() {
     }
 
     if (!parentMessage.trim()) {
-      setMessage("Digite um recado.");
+      setMessage("Digite um recado antes de enviar.");
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    setLoadingMessage(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       setMessage("Usuário não autenticado.");
+      setLoadingMessage(false);
       return;
     }
 
@@ -91,11 +133,32 @@ export default function MeuFilhoPage() {
 
     if (error) {
       setMessage("Erro ao enviar recado: " + error.message);
+      setLoadingMessage(false);
       return;
     }
 
     setParentMessage("");
     setMessage("Recado enviado para a escola.");
+    setLoadingMessage(false);
+  }
+
+  function formatDate(date: string) {
+    const [year, month, day] = date.split("-");
+    return `${day}/${month}/${year}`;
+  }
+
+  function moodEmoji(mood: string | null) {
+    if (!mood) return "🙂";
+
+    const value = mood.toLowerCase();
+
+    if (value.includes("feliz")) return "😄";
+    if (value.includes("tranquilo")) return "🙂";
+    if (value.includes("agitado")) return "🤸";
+    if (value.includes("choroso")) return "😢";
+    if (value.includes("irritado")) return "😠";
+
+    return "🙂";
   }
 
   useEffect(() => {
@@ -103,79 +166,357 @@ export default function MeuFilhoPage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 900 }}>
-      <h1>Agenda do meu filho</h1>
+    <div>
+      <div style={heroCardStyle}>
+        <div style={heroContentStyle}>
+          <div style={avatarStyle}>
+            {student?.name?.charAt(0).toUpperCase() || "F"}
+          </div>
 
-      {message && <p>{message}</p>}
+          <div>
+            <p style={eyebrowStyle}>Área do responsável</p>
+            <h1 style={pageTitle}>
+              {student ? `Agenda de ${student.name}` : "Meu filho"}
+            </h1>
+            <p style={subtitle}>
+              🏫 Turma: <strong>{className || "Carregando..."}</strong>
+            </p>
+          </div>
+        </div>
+      </div>
 
-      {student && (
-        <>
-          <h2>{student.name}</h2>
+      <div style={messageCardStyle}>
+        <h2 style={sectionTitle}>💬 Enviar recado para a escola</h2>
 
-          <section style={{ marginTop: 24 }}>
-            <h3>Enviar recado para a escola</h3>
+        <textarea
+          placeholder="Ex: Hoje ele acordou um pouco indisposto. Qualquer coisa, podem me avisar."
+          value={parentMessage}
+          onChange={(e) => setParentMessage(e.target.value)}
+          style={textareaStyle}
+        />
 
-            <textarea
-              placeholder="Escreva um recado para a escola/professora"
-              value={parentMessage}
-              onChange={(e) => setParentMessage(e.target.value)}
-              style={{
-                padding: 12,
-                width: "100%",
-                maxWidth: 500,
-                minHeight: 80,
-                border: "1px solid #ccc",
-                borderRadius: 8,
-                marginBottom: 12,
-              }}
-            />
+        <button
+          onClick={sendMessageToSchool}
+          disabled={loadingMessage}
+          style={{
+            ...buttonPrimary,
+            background: loadingMessage ? "#9ca3af" : "#2563eb",
+            cursor: loadingMessage ? "not-allowed" : "pointer",
+          }}
+        >
+          {loadingMessage ? "Enviando..." : "Enviar recado"}
+        </button>
 
-            <br />
+        {message && <p style={messageStyle}>{message}</p>}
+      </div>
 
-            <button onClick={sendMessageToSchool} style={button}>
-              Enviar recado
-            </button>
-          </section>
+      <div style={timelineWrapperStyle}>
+        <h2 style={sectionTitle}>📅 Histórico da agenda</h2>
 
-          <section style={{ marginTop: 40 }}>
-            <h3>Agendas registradas</h3>
+        {reports.length === 0 ? (
+          <div style={emptyCardStyle}>
+            <h3>📭 Nenhuma agenda registrada ainda</h3>
+            <p style={{ color: "#6b7280" }}>
+              Quando a escola preencher a agenda, ela aparecerá aqui.
+            </p>
+          </div>
+        ) : (
+          reports.map((report, index) => (
+            <div key={report.id} style={timelineItemStyle}>
+              <div style={timelineMarkerColumnStyle}>
+                <div style={timelineDotStyle}>{moodEmoji(report.mood)}</div>
 
-            {reports.length === 0 ? (
-              <p>Nenhuma agenda registrada ainda.</p>
-            ) : (
-              reports.map((report) => (
-                <div key={report.id} style={card}>
-                  <h3>Agenda de {report.report_date}</h3>
+                {index !== reports.length - 1 && (
+                  <div style={timelineLineStyle}></div>
+                )}
+              </div>
 
-                  <p><strong>Alimentação:</strong> {report.food || "Não informado"}</p>
-                  <p><strong>Sono:</strong> {report.sleep || "Não informado"}</p>
-                  <p><strong>Banheiro:</strong> {report.bathroom || "Não informado"}</p>
-                  <p><strong>Humor:</strong> {report.mood || "Não informado"}</p>
-                  <p><strong>Atividades:</strong> {report.activities || "Não informado"}</p>
-                  <p><strong>Observações:</strong> {report.observations || "Não informado"}</p>
-                  <p><strong>Recado da escola:</strong> {report.message_to_parents || "Não informado"}</p>
+              <div style={reportCardStyle}>
+                <div style={reportHeaderStyle}>
+                  <div>
+                    <p style={dateLabelStyle}>📅 {formatDate(report.report_date)}</p>
+                    <h3 style={reportTitleStyle}>Agenda do dia</h3>
+                  </div>
+
+                  <span style={moodBadgeStyle}>
+                    {moodEmoji(report.mood)} {report.mood || "Humor não informado"}
+                  </span>
                 </div>
-              ))
-            )}
-          </section>
-        </>
-      )}
+
+                <div style={infoGridStyle}>
+                  <InfoBlock
+                    icon="🍽️"
+                    label="Alimentação"
+                    value={report.food}
+                  />
+
+                  <InfoBlock
+                    icon="😴"
+                    label="Sono"
+                    value={report.sleep}
+                  />
+
+                  <InfoBlock
+                    icon="🚽"
+                    label="Banheiro / fralda"
+                    value={report.bathroom}
+                  />
+
+                  <InfoBlock
+                    icon="🎨"
+                    label="Atividades"
+                    value={report.activities}
+                  />
+                </div>
+
+                <div style={parentMessageBoxStyle}>
+                  <strong>💬 Recado da escola</strong>
+                  <p>{report.message_to_parents || "Nenhum recado enviado."}</p>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
 
-const button = {
-  padding: 10,
-  background: "#111827",
-  color: "#fff",
-  border: "none",
-  borderRadius: 6,
-  cursor: "pointer",
+function InfoBlock({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <div style={infoBlockStyle}>
+      <div style={infoIconStyle}>{icon}</div>
+      <div>
+        <p style={infoLabelStyle}>{label}</p>
+        <p style={infoValueStyle}>{value || "Não informado"}</p>
+      </div>
+    </div>
+  );
+}
+
+const heroCardStyle = {
+  background: "linear-gradient(135deg, #16a34a, #22c55e)",
+  borderRadius: 22,
+  padding: 32,
+  color: "white",
+  marginBottom: 28,
+  boxShadow: "0 12px 30px rgba(34, 197, 94, 0.22)",
 };
 
-const card = {
-  border: "1px solid #ddd",
-  padding: 16,
-  borderRadius: 8,
-  marginBottom: 12,
+const heroContentStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 18,
+  flexWrap: "wrap" as const,
+};
+
+const avatarStyle = {
+  width: 64,
+  height: 64,
+  borderRadius: 20,
+  background: "rgba(255,255,255,0.22)",
+  color: "white",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: 800,
+  fontSize: 26,
+};
+
+const eyebrowStyle = {
+  margin: 0,
+  fontSize: 13,
+  textTransform: "uppercase" as const,
+  letterSpacing: 1,
+  opacity: 0.9,
+  fontWeight: 700,
+};
+
+const pageTitle = {
+  fontSize: 32,
+  margin: "8px 0 6px",
+};
+
+const subtitle = {
+  margin: 0,
+  opacity: 0.95,
+};
+
+const messageCardStyle = {
+  background: "#ffffff",
+  borderRadius: 18,
+  padding: 28,
+  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+  marginBottom: 28,
+};
+
+const sectionTitle = {
+  fontSize: 20,
+  marginBottom: 18,
+};
+
+const textareaStyle = {
+  display: "block",
+  width: "100%",
+  maxWidth: 720,
+  minHeight: 110,
+  padding: 12,
+  borderRadius: 12,
+  border: "1px solid #d1d5db",
+  marginBottom: 14,
+  fontSize: 14,
+};
+
+const buttonPrimary = {
+  padding: "12px 18px",
+  borderRadius: 10,
+  border: "none",
+  color: "white",
+  fontWeight: 700,
+};
+
+const messageStyle = {
+  marginTop: 14,
+  color: "#374151",
+};
+
+const timelineWrapperStyle = {
+  background: "#ffffff",
+  borderRadius: 18,
+  padding: 28,
+  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+};
+
+const timelineItemStyle = {
+  display: "grid",
+  gridTemplateColumns: "54px 1fr",
+  gap: 18,
+};
+
+const timelineMarkerColumnStyle = {
+  display: "flex",
+  flexDirection: "column" as const,
+  alignItems: "center",
+};
+
+const timelineDotStyle = {
+  width: 44,
+  height: 44,
+  borderRadius: 999,
+  background: "#f0fdf4",
+  border: "2px solid #bbf7d0",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 22,
+  zIndex: 2,
+};
+
+const timelineLineStyle = {
+  width: 2,
+  flex: 1,
+  background: "#dcfce7",
+  marginTop: 8,
+  marginBottom: 8,
+};
+
+const reportCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 18,
+  padding: 22,
+  marginBottom: 22,
+  background: "#ffffff",
+  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.05)",
+};
+
+const reportHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 16,
+  flexWrap: "wrap" as const,
+  marginBottom: 18,
+};
+
+const dateLabelStyle = {
+  margin: 0,
+  color: "#16a34a",
+  fontWeight: 800,
+};
+
+const reportTitleStyle = {
+  margin: "6px 0 0",
+  fontSize: 22,
+};
+
+const moodBadgeStyle = {
+  padding: "8px 12px",
+  borderRadius: 999,
+  background: "#f3f4f6",
+  color: "#111827",
+  fontWeight: 700,
+  fontSize: 14,
+};
+
+const infoGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+  gap: 14,
+  marginBottom: 18,
+};
+
+const infoBlockStyle = {
+  display: "flex",
+  gap: 12,
+  alignItems: "flex-start",
+  padding: 14,
+  borderRadius: 14,
+  background: "#f9fafb",
+  border: "1px solid #f3f4f6",
+};
+
+const infoIconStyle = {
+  width: 32,
+  height: 32,
+  borderRadius: 10,
+  background: "#f0fdf4",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const infoLabelStyle = {
+  margin: 0,
+  color: "#6b7280",
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: "uppercase" as const,
+};
+
+const infoValueStyle = {
+  margin: "4px 0 0",
+  color: "#111827",
+};
+
+const parentMessageBoxStyle = {
+  padding: 14,
+  borderRadius: 14,
+  background: "#f0fdf4",
+  border: "1px solid #bbf7d0",
+  color: "#166534",
+};
+
+const emptyCardStyle = {
+  padding: 24,
+  borderRadius: 16,
+  background: "#f9fafb",
+  border: "1px dashed #d1d5db",
 };
