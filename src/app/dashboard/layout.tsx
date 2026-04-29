@@ -5,8 +5,6 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
-type Role = "admin" | "supervisor" | "teacher" | "guardian" | null;
-
 export default function DashboardLayout({
   children,
 }: {
@@ -14,8 +12,8 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
 
-  const [role, setRole] = useState<Role>(null);
-  const [loadingRole, setLoadingRole] = useState(true);
+  const [role, setRole] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   async function loadRole() {
     const {
@@ -33,13 +31,14 @@ export default function DashboardLayout({
       .eq("id", user.id)
       .single();
 
-    if (error || !data?.role) {
-      setRole(null);
+    if (error) {
+      console.log("Erro ao buscar perfil:", error.message);
+      setRole("");
     } else {
-      setRole(data.role as Role);
+      setRole(data?.role || "");
     }
 
-    setLoadingRole(false);
+    setLoading(false);
   }
 
   async function handleLogout() {
@@ -51,13 +50,13 @@ export default function DashboardLayout({
     loadRole();
   }, []);
 
-  if (loadingRole) {
-    return (
-      <div style={{ padding: 32, fontFamily: "Arial, sans-serif" }}>
-        Carregando...
-      </div>
-    );
+  if (loading) {
+    return <div style={{ padding: 32 }}>Carregando...</div>;
   }
+
+  const isAdmin = role === "admin" || role === "supervisor";
+  const isTeacher = role === "teacher";
+  const isGuardian = role === "guardian";
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif" }}>
@@ -66,15 +65,15 @@ export default function DashboardLayout({
           padding: 20,
           borderBottom: "1px solid #ddd",
           display: "flex",
-          gap: 20,
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 20,
         }}
       >
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           <Link href="/dashboard">Início</Link>
 
-          {(role === "admin" || role === "supervisor") && (
+          {isAdmin && (
             <>
               <Link href="/dashboard/turmas">Turmas</Link>
               <Link href="/dashboard/professores">Professores</Link>
@@ -85,17 +84,15 @@ export default function DashboardLayout({
             </>
           )}
 
-          {role === "teacher" && (
+          {isTeacher && (
             <>
               <Link href="/dashboard/minhas-turmas">Minhas turmas</Link>
               <Link href="/dashboard/agenda">Agenda</Link>
             </>
           )}
 
-          {role === "guardian" && (
-            <>
-              <Link href="/dashboard/meu-filho">Meu filho</Link>
-            </>
+          {isGuardian && (
+            <Link href="/dashboard/meu-filho">Meu filho</Link>
           )}
         </div>
 
@@ -113,6 +110,10 @@ export default function DashboardLayout({
           Sair
         </button>
       </nav>
+
+      <div style={{ padding: "8px 20px", background: "#f3f4f6" }}>
+        Perfil carregado: <strong>{role || "nenhum"}</strong>
+      </div>
 
       <main style={{ padding: 32 }}>{children}</main>
     </div>
