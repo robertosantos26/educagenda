@@ -18,13 +18,15 @@ type Student = {
   notes: string | null;
 };
 
+type GuardianProfile = {
+  name: string;
+  email: string | null;
+  phone: string | null;
+};
+
 type GuardianLink = {
   student_id: string;
-  profiles?: {
-    name: string;
-    email: string | null;
-    phone: string | null;
-  } | null;
+  profiles: GuardianProfile[] | null;
 };
 
 export default function CriancasPage() {
@@ -91,7 +93,7 @@ export default function CriancasPage() {
       .from("student_guardians")
       .select("student_id, profiles(name, email, phone)");
 
-    setGuardianLinks((data || []) as GuardianLink[]);
+    setGuardianLinks((data || []) as unknown as GuardianLink[]);
   }
 
   function resetForm() {
@@ -185,6 +187,7 @@ export default function CriancasPage() {
     resetForm();
     setShowForm(false);
     await loadStudents();
+    await loadGuardians();
     setLoading(false);
   }
 
@@ -195,7 +198,7 @@ export default function CriancasPage() {
 
   function getGuardian(studentId: string) {
     const link = guardianLinks.find((item) => item.student_id === studentId);
-    return link?.profiles || null;
+    return link?.profiles?.[0] || null;
   }
 
   useEffect(() => {
