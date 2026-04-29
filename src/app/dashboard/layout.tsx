@@ -1,3 +1,4 @@
+<h2 style={{ color: "yellow" }}>LAYOUT NOVO</h2>
 "use client";
 
 import { useEffect, useState } from "react";
