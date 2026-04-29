@@ -11,9 +11,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-
-  const [role, setRole] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState("");
 
   async function loadRole() {
     const {
@@ -25,20 +23,13 @@ export default function DashboardLayout({
       return;
     }
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    if (error) {
-      console.log("Erro ao buscar perfil:", error.message);
-      setRole("");
-    } else {
-      setRole(data?.role || "");
-    }
-
-    setLoading(false);
+    setRole(data?.role || "");
   }
 
   async function handleLogout() {
@@ -50,73 +41,117 @@ export default function DashboardLayout({
     loadRole();
   }, []);
 
-  if (loading) {
-    return <div style={{ padding: 32 }}>Carregando...</div>;
-  }
-
-  const isAdmin = role === "admin" || role === "supervisor";
-  const isTeacher = role === "teacher";
-  const isGuardian = role === "guardian";
-
   return (
-    <div style={{ fontFamily: "Arial, sans-serif" }}>
-      <nav
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f4f7fb",
+        fontFamily: "Arial, sans-serif",
+        color: "#111827",
+      }}
+    >
+      <aside
         style={{
-          padding: 20,
-          borderBottom: "1px solid #ddd",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 20,
+          width: 260,
+          minHeight: "100vh",
+          background: "#1f2937",
+          color: "white",
+          position: "fixed",
+          left: 0,
+          top: 0,
+          padding: 24,
         }}
       >
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-          <Link href="/dashboard">Início</Link>
+        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Educagenda</h1>
+        <p style={{ fontSize: 13, color: "#cbd5e1", marginBottom: 32 }}>
+          Agenda escolar infantil
+        </p>
 
-          {isAdmin && (
+        <nav style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <MenuLink href="/dashboard">Início</MenuLink>
+
+          {(role === "admin" || role === "supervisor") && (
             <>
-              <Link href="/dashboard/parents">Responsáveis</Link>
-              <Link href="/dashboard/turmas">Turmas</Link>
-              <Link href="/dashboard/professores">Professores</Link>
-              <Link href="/dashboard/criancas">Crianças</Link>
-              <Link href="/dashboard/responsaveis">Responsáveis</Link>
-              <Link href="/dashboard/relatorios">Relatórios</Link>
-              <Link href="/dashboard/agenda">Agenda</Link>
+              <MenuLink href="/dashboard/turmas">Turmas</MenuLink>
+              <MenuLink href="/dashboard/professores">Professores</MenuLink>
+              <MenuLink href="/dashboard/criancas">Crianças</MenuLink>
+              <MenuLink href="/dashboard/agenda">Agenda</MenuLink>
+              <MenuLink href="/dashboard/relatorios">Relatórios</MenuLink>
             </>
           )}
 
-          {isTeacher && (
+          {role === "teacher" && (
             <>
-              <Link href="/dashboard/minhas-turmas">Minhas turmas</Link>
-              <Link href="/dashboard/agenda">Agenda</Link>
+              <MenuLink href="/dashboard/minhas-turmas">Minhas turmas</MenuLink>
+              <MenuLink href="/dashboard/agenda">Agenda</MenuLink>
             </>
           )}
 
-          {isGuardian && (
-            <Link href="/dashboard/meu-filho">Meu filho</Link>
+          {role === "guardian" && (
+            <MenuLink href="/dashboard/meu-filho">Meu filho</MenuLink>
           )}
-        </div>
+        </nav>
 
         <button
           onClick={handleLogout}
           style={{
-            padding: "8px 12px",
-            borderRadius: 6,
+            marginTop: 40,
+            width: "100%",
+            padding: "12px 16px",
             border: "none",
-            background: "#dc2626",
+            borderRadius: 10,
+            background: "#ef4444",
             color: "white",
             cursor: "pointer",
+            fontWeight: "bold",
           }}
         >
           Sair
         </button>
-      </nav>
+      </aside>
 
-      <div style={{ padding: "8px 20px", background: "#f3f4f6" }}>
-        Perfil carregado: <strong>{role || "nenhum"}</strong>
-      </div>
-
-      <main style={{ padding: 32 }}>{children}</main>
+      <main
+        style={{
+          marginLeft: 260,
+          padding: 32,
+        }}
+      >
+        <div
+          style={{
+            background: "white",
+            borderRadius: 18,
+            padding: 32,
+            boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+            minHeight: "calc(100vh - 64px)",
+          }}
+        >
+          {children}
+        </div>
+      </main>
     </div>
+  );
+}
+
+function MenuLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        color: "white",
+        textDecoration: "none",
+        padding: "12px 14px",
+        borderRadius: 10,
+        background: "rgba(255,255,255,0.08)",
+        fontSize: 15,
+      }}
+    >
+      {children}
+    </Link>
   );
 }
