@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const [teachersCount, setTeachersCount] = useState(0);
   const [classesCount, setClassesCount] = useState(0);
   const [reportsTodayCount, setReportsTodayCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   const [teacherChildrenCount, setTeacherChildrenCount] = useState(0);
   const [teacherReportsTodayCount, setTeacherReportsTodayCount] = useState(0);
@@ -57,10 +58,18 @@ export default function DashboardPage() {
       .eq("school_id", profile.school_id)
       .eq("report_date", today);
 
+    const { count: unreadMessages } = await supabase
+      .from("parent_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("school_id", profile.school_id)
+      .eq("read_by_admin", false)
+      .eq("read_by_teacher", false);
+
     setChildrenCount(children || 0);
     setTeachersCount(teachers || 0);
     setClassesCount(classes || 0);
     setReportsTodayCount(reportsToday || 0);
+    setUnreadMessagesCount(unreadMessages || 0);
   }
 
   async function loadTeacherDashboard(profile: any) {
@@ -85,6 +94,7 @@ export default function DashboardPage() {
       setTeacherChildrenCount(0);
       setTeacherReportsTodayCount(0);
       setTeacherPendingTodayCount(0);
+      setUnreadMessagesCount(0);
       return;
     }
 
@@ -96,13 +106,13 @@ export default function DashboardPage() {
       .in("class_id", classIds);
 
     const studentIds = students?.map((student) => student.id) || [];
-
     const totalChildren = studentIds.length;
 
     if (studentIds.length === 0) {
       setTeacherChildrenCount(0);
       setTeacherReportsTodayCount(0);
       setTeacherPendingTodayCount(0);
+      setUnreadMessagesCount(0);
       return;
     }
 
@@ -113,12 +123,21 @@ export default function DashboardPage() {
       .eq("report_date", today)
       .in("student_id", studentIds);
 
+    const { count: unreadMessages } = await supabase
+      .from("parent_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("school_id", profile.school_id)
+      .eq("read_by_admin", false)
+      .eq("read_by_teacher", false)
+      .in("student_id", studentIds);
+
     const doneToday = reportsToday || 0;
     const pendingToday = Math.max(totalChildren - doneToday, 0);
 
     setTeacherChildrenCount(totalChildren);
     setTeacherReportsTodayCount(doneToday);
     setTeacherPendingTodayCount(pendingToday);
+    setUnreadMessagesCount(unreadMessages || 0);
   }
 
   async function loadDashboard() {
@@ -151,7 +170,7 @@ export default function DashboardPage() {
           <h1 style={titleStyle}>Olá, {name || "usuário"} 👋</h1>
           <p style={subtitleStyle}>
             {isTeacher
-              ? "Acompanhe suas crianças e o preenchimento das agendas de hoje."
+              ? "Acompanhe suas crianças, agendas e mensagens dos responsáveis."
               : "Acompanhe os principais números da escola e acesse rapidamente as áreas do sistema."}
           </p>
         </div>
@@ -193,6 +212,16 @@ export default function DashboardPage() {
               color="#ea580c"
               background="#fff7ed"
             />
+
+            <DashboardCard
+              emoji="💬"
+              title="Mensagens não lidas"
+              value={unreadMessagesCount}
+              description="Recados dos pais ainda pendentes"
+              href="/dashboard/mensagens"
+              color="#dc2626"
+              background="#fef2f2"
+            />
           </div>
 
           <div style={quickActionsCardStyle}>
@@ -201,6 +230,7 @@ export default function DashboardPage() {
             <div style={quickActionsGridStyle}>
               <QuickAction href="/dashboard/agenda-turma" label="Preencher agenda por turma" />
               <QuickAction href="/dashboard/minhas-turmas" label="Ver minhas turmas" />
+              <QuickAction href="/dashboard/mensagens" label="Ver mensagens dos pais" />
               <QuickAction href="/dashboard/agenda" label="Agenda individual" />
             </div>
           </div>
@@ -247,6 +277,16 @@ export default function DashboardPage() {
               color="#ea580c"
               background="#fff7ed"
             />
+
+            <DashboardCard
+              emoji="💬"
+              title="Mensagens não lidas"
+              value={unreadMessagesCount}
+              description="Recados dos pais ainda pendentes"
+              href="/dashboard/mensagens"
+              color="#dc2626"
+              background="#fef2f2"
+            />
           </div>
 
           <div style={quickActionsCardStyle}>
@@ -257,6 +297,7 @@ export default function DashboardPage() {
               <QuickAction href="/dashboard/criancas" label="Cadastrar criança" />
               <QuickAction href="/dashboard/professores" label="Cadastrar professor" />
               <QuickAction href="/dashboard/turmas" label="Cadastrar turma" />
+              <QuickAction href="/dashboard/mensagens" label="Ver mensagens dos pais" />
             </div>
           </div>
         </>
