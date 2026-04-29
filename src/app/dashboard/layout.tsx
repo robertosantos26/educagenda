@@ -64,6 +64,7 @@ export default function DashboardLayout({
               <Link href="/dashboard/professores">Professores</Link>
               <Link href="/dashboard/criancas">Crianças</Link>
               <Link href="/dashboard/relatorios">Relatórios</Link>
+              <Link href="/dashboard/responsaveis">Responsáveis</Link>
             </>
           )}
 
@@ -76,6 +77,9 @@ export default function DashboardLayout({
           {(role === "admin" || role === "supervisor" || role === "teacher") && (
             <Link href="/dashboard/agenda">Agenda</Link>
           )}
+          {role === "guardian" && (
+  <Link href="/dashboard/meu-filho">Meu filho</Link>
+)}
         </div>
 
         <button
