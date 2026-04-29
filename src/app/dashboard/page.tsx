@@ -13,6 +13,10 @@ export default function DashboardPage() {
   const [classesCount, setClassesCount] = useState(0);
   const [reportsTodayCount, setReportsTodayCount] = useState(0);
 
+  const [teacherChildrenCount, setTeacherChildrenCount] = useState(0);
+  const [teacherReportsTodayCount, setTeacherReportsTodayCount] = useState(0);
+  const [teacherPendingTodayCount, setTeacherPendingTodayCount] = useState(0);
+
   async function getProfile() {
     const {
       data: { user },
@@ -22,21 +26,14 @@ export default function DashboardPage() {
 
     const { data } = await supabase
       .from("profiles")
-      .select("name, role, school_id")
+      .select("id, name, role, school_id")
       .eq("id", user.id)
       .single();
 
     return data || null;
   }
 
-  async function loadDashboard() {
-    const profile = await getProfile();
-
-    if (!profile?.school_id) return;
-
-    setName(profile.name || "");
-    setRole(profile.role || "");
-
+  async function loadAdminDashboard(profile: any) {
     const today = new Date().toISOString().split("T")[0];
 
     const { count: children } = await supabase
@@ -66,20 +63,96 @@ export default function DashboardPage() {
     setReportsTodayCount(reportsToday || 0);
   }
 
+  async function loadTeacherDashboard(profile: any) {
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data: teacher } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("auth_user_id", profile.id)
+      .single();
+
+    if (!teacher?.id) return;
+
+    const { data: links } = await supabase
+      .from("teacher_class_links")
+      .select("class_id")
+      .eq("teacher_id", teacher.id);
+
+    const classIds = links?.map((item) => item.class_id) || [];
+
+    if (classIds.length === 0) {
+      setTeacherChildrenCount(0);
+      setTeacherReportsTodayCount(0);
+      setTeacherPendingTodayCount(0);
+      return;
+    }
+
+    const { data: students } = await supabase
+      .from("students")
+      .select("id")
+      .eq("school_id", profile.school_id)
+      .eq("active", true)
+      .in("class_id", classIds);
+
+    const studentIds = students?.map((student) => student.id) || [];
+
+    const totalChildren = studentIds.length;
+
+    if (studentIds.length === 0) {
+      setTeacherChildrenCount(0);
+      setTeacherReportsTodayCount(0);
+      setTeacherPendingTodayCount(0);
+      return;
+    }
+
+    const { count: reportsToday } = await supabase
+      .from("daily_reports")
+      .select("*", { count: "exact", head: true })
+      .eq("school_id", profile.school_id)
+      .eq("report_date", today)
+      .in("student_id", studentIds);
+
+    const doneToday = reportsToday || 0;
+    const pendingToday = Math.max(totalChildren - doneToday, 0);
+
+    setTeacherChildrenCount(totalChildren);
+    setTeacherReportsTodayCount(doneToday);
+    setTeacherPendingTodayCount(pendingToday);
+  }
+
+  async function loadDashboard() {
+    const profile = await getProfile();
+
+    if (!profile?.school_id) return;
+
+    setName(profile.name || "");
+    setRole(profile.role || "");
+
+    if (profile.role === "teacher") {
+      await loadTeacherDashboard(profile);
+      return;
+    }
+
+    await loadAdminDashboard(profile);
+  }
+
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  const isTeacher = role === "teacher";
 
   return (
     <div>
       <div style={heroCardStyle}>
         <div>
           <p style={eyebrowStyle}>Painel Educagenda</p>
-          <h1 style={titleStyle}>
-            Olá, {name || "usuário"} 👋
-          </h1>
+          <h1 style={titleStyle}>Olá, {name || "usuário"} 👋</h1>
           <p style={subtitleStyle}>
-            Acompanhe os principais números da escola e acesse rapidamente as áreas do sistema.
+            {isTeacher
+              ? "Acompanhe suas crianças e o preenchimento das agendas de hoje."
+              : "Acompanhe os principais números da escola e acesse rapidamente as áreas do sistema."}
           </p>
         </div>
 
@@ -88,58 +161,106 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div style={gridStyle}>
-        <DashboardCard
-          emoji="👶"
-          title="Crianças"
-          value={childrenCount}
-          description="Alunos cadastrados na escola"
-          href="/dashboard/criancas"
-          color="#2563eb"
-          background="#eff6ff"
-        />
+      {isTeacher ? (
+        <>
+          <div style={gridStyle}>
+            <DashboardCard
+              emoji="👶"
+              title="Minhas crianças"
+              value={teacherChildrenCount}
+              description="Crianças das suas turmas"
+              href="/dashboard/minhas-turmas"
+              color="#2563eb"
+              background="#eff6ff"
+            />
 
-        <DashboardCard
-          emoji="👩‍🏫"
-          title="Professores"
-          value={teachersCount}
-          description="Professores cadastrados"
-          href="/dashboard/professores"
-          color="#16a34a"
-          background="#f0fdf4"
-        />
+            <DashboardCard
+              emoji="✅"
+              title="Agendas feitas hoje"
+              value={teacherReportsTodayCount}
+              description="Agendas já registradas"
+              href="/dashboard/agenda-turma"
+              color="#16a34a"
+              background="#f0fdf4"
+            />
 
-        <DashboardCard
-          emoji="🏫"
-          title="Turmas"
-          value={classesCount}
-          description="Turmas cadastradas"
-          href="/dashboard/turmas"
-          color="#9333ea"
-          background="#faf5ff"
-        />
+            <DashboardCard
+              emoji="⏳"
+              title="Faltam hoje"
+              value={teacherPendingTodayCount}
+              description="Crianças ainda sem agenda"
+              href="/dashboard/agenda-turma"
+              color="#ea580c"
+              background="#fff7ed"
+            />
+          </div>
 
-        <DashboardCard
-          emoji="📅"
-          title="Agendas hoje"
-          value={reportsTodayCount}
-          description="Agendas registradas hoje"
-          href="/dashboard/agenda-turma"
-          color="#ea580c"
-          background="#fff7ed"
-        />
-      </div>
+          <div style={quickActionsCardStyle}>
+            <h2 style={sectionTitleStyle}>Atalhos rápidos</h2>
 
-      <div style={quickActionsCardStyle}>
-        <h2 style={sectionTitleStyle}>Atalhos rápidos</h2>
+            <div style={quickActionsGridStyle}>
+              <QuickAction href="/dashboard/agenda-turma" label="Preencher agenda por turma" />
+              <QuickAction href="/dashboard/minhas-turmas" label="Ver minhas turmas" />
+              <QuickAction href="/dashboard/agenda" label="Agenda individual" />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={gridStyle}>
+            <DashboardCard
+              emoji="👶"
+              title="Crianças"
+              value={childrenCount}
+              description="Alunos cadastrados na escola"
+              href="/dashboard/criancas"
+              color="#2563eb"
+              background="#eff6ff"
+            />
 
-        <div style={quickActionsGridStyle}>
-          <QuickAction href="/dashboard/agenda-turma" label="Preencher agenda por turma" />
-          <QuickAction href="/dashboard/criancas" label="Cadastrar criança" />
-          <QuickAction href="/dashboard/professores" label="Cadastrar professor" />
-          <QuickAction href="/dashboard/turmas" label="Cadastrar turma" />
-        </div>
-      </div>
+            <DashboardCard
+              emoji="👩‍🏫"
+              title="Professores"
+              value={teachersCount}
+              description="Professores cadastrados"
+              href="/dashboard/professores"
+              color="#16a34a"
+              background="#f0fdf4"
+            />
+
+            <DashboardCard
+              emoji="🏫"
+              title="Turmas"
+              value={classesCount}
+              description="Turmas cadastradas"
+              href="/dashboard/turmas"
+              color="#9333ea"
+              background="#faf5ff"
+            />
+
+            <DashboardCard
+              emoji="📅"
+              title="Agendas hoje"
+              value={reportsTodayCount}
+              description="Agendas registradas hoje"
+              href="/dashboard/agenda-turma"
+              color="#ea580c"
+              background="#fff7ed"
+            />
+          </div>
+
+          <div style={quickActionsCardStyle}>
+            <h2 style={sectionTitleStyle}>Atalhos rápidos</h2>
+
+            <div style={quickActionsGridStyle}>
+              <QuickAction href="/dashboard/agenda-turma" label="Preencher agenda por turma" />
+              <QuickAction href="/dashboard/criancas" label="Cadastrar criança" />
+              <QuickAction href="/dashboard/professores" label="Cadastrar professor" />
+              <QuickAction href="/dashboard/turmas" label="Cadastrar turma" />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -175,9 +296,7 @@ function DashboardCard({
         </div>
 
         <p style={cardTitleStyle}>{title}</p>
-
         <h2 style={{ ...cardValueStyle, color }}>{value}</h2>
-
         <p style={cardDescriptionStyle}>{description}</p>
       </div>
     </Link>
@@ -248,7 +367,6 @@ const dashboardCardStyle = {
   border: "1px solid #e5e7eb",
   boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
   minHeight: 190,
-  transition: "0.2s",
 };
 
 const emojiBoxStyle = {
