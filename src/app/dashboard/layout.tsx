@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +11,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [role, setRole] = useState("");
 
   async function loadRole() {
@@ -29,7 +30,12 @@ export default function DashboardLayout({
       .eq("id", user.id)
       .single();
 
-    setRole(data?.role || "");
+    const currentRole = data?.role || "";
+    setRole(currentRole);
+
+    if (currentRole === "guardian" && pathname === "/dashboard") {
+      router.push("/dashboard/meu-filho");
+    }
   }
 
   async function handleLogout() {
@@ -39,7 +45,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     loadRole();
-  }, []);
+  }, [pathname]);
 
   return (
     <div
@@ -68,7 +74,7 @@ export default function DashboardLayout({
         </p>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <MenuLink href="/dashboard">Início</MenuLink>
+          {role !== "guardian" && <MenuLink href="/dashboard">Início</MenuLink>}
 
           {(role === "admin" || role === "supervisor") && (
             <>
