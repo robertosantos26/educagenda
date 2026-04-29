@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 type ClassItem = {
@@ -117,7 +118,7 @@ export default function CriancasPage() {
     <div>
       <div style={cardStyle}>
         <h1 style={pageTitle}>Crianças</h1>
-        <p style={subtitle}>Cadastre as crianças e vincule cada uma a uma turma.</p>
+        <p style={subtitle}>Cadastre as crianças e acesse o histórico de agenda direto pelo nome.</p>
 
         <h2 style={sectionTitle}>Cadastrar criança</h2>
 
@@ -149,11 +150,7 @@ export default function CriancasPage() {
           ))}
         </select>
 
-        <button
-          onClick={createStudent}
-          disabled={loading}
-          style={buttonPrimary}
-        >
+        <button onClick={createStudent} disabled={loading} style={buttonPrimary}>
           {loading ? "Salvando..." : "Cadastrar criança"}
         </button>
 
@@ -172,11 +169,22 @@ export default function CriancasPage() {
 
               return (
                 <div key={student.id} style={studentCardStyle}>
-                  <strong>{student.name}</strong>
-                  <span>Turma: {turma?.name || "Sem turma"}</span>
-                  <span>
-                    Nascimento: {student.birth_date || "Não informado"}
-                  </span>
+                  <div>
+                    <strong style={{ fontSize: 17 }}>{student.name}</strong>
+                    <p style={{ margin: "6px 0", color: "#6b7280" }}>
+                      Turma: {turma?.name || "Sem turma"}
+                    </p>
+                    <p style={{ margin: 0, color: "#6b7280" }}>
+                      Nascimento: {student.birth_date || "Não informado"}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={`/dashboard/criancas/${student.id}/agendas`}
+                    style={historyButtonStyle}
+                  >
+                    Ver histórico
+                  </Link>
                 </div>
               );
             })}
@@ -250,6 +258,17 @@ const studentCardStyle = {
   border: "1px solid #e5e7eb",
   borderRadius: 12,
   display: "flex",
-  flexDirection: "column" as const,
-  gap: 6,
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 16,
+};
+
+const historyButtonStyle = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  background: "#eff6ff",
+  color: "#2563eb",
+  textDecoration: "none",
+  fontWeight: 700,
+  whiteSpace: "nowrap" as const,
 };
