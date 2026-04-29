@@ -75,7 +75,7 @@ export default function DashboardLayout({
 
           {isAdmin && (
             <>
-              <Link href="/dashboard/responsaveis">Responsáveis</Link>
+              <Link href="/dashboard/parents">Responsáveis</Link>
               <Link href="/dashboard/turmas">Turmas</Link>
               <Link href="/dashboard/professores">Professores</Link>
               <Link href="/dashboard/criancas">Crianças</Link>
