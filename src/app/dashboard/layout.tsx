@@ -75,7 +75,8 @@ export default function DashboardLayout({
               <MenuLink href="/dashboard/turmas">Turmas</MenuLink>
               <MenuLink href="/dashboard/professores">Professores</MenuLink>
               <MenuLink href="/dashboard/criancas">Crianças</MenuLink>
-              <MenuLink href="/dashboard/agenda">Agenda</MenuLink>
+              <MenuLink href="/dashboard/agenda">Agenda individual</MenuLink>
+              <MenuLink href="/dashboard/agenda-turma">Agenda por turma</MenuLink>
               <MenuLink href="/dashboard/relatorios">Relatórios</MenuLink>
             </>
           )}
@@ -83,7 +84,8 @@ export default function DashboardLayout({
           {role === "teacher" && (
             <>
               <MenuLink href="/dashboard/minhas-turmas">Minhas turmas</MenuLink>
-              <MenuLink href="/dashboard/agenda">Agenda</MenuLink>
+              <MenuLink href="/dashboard/agenda">Agenda individual</MenuLink>
+              <MenuLink href="/dashboard/agenda-turma">Agenda por turma</MenuLink>
             </>
           )}
 
@@ -110,12 +112,7 @@ export default function DashboardLayout({
         </button>
       </aside>
 
-      <main
-        style={{
-          marginLeft: 260,
-          padding: 32,
-        }}
-      >
+      <main style={{ marginLeft: 260, padding: 32 }}>
         <div
           style={{
             background: "white",
