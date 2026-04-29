@@ -13,7 +13,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+
   const [role, setRole] = useState<Role>(null);
+  const [loadingRole, setLoadingRole] = useState(true);
 
   async function loadRole() {
     const {
@@ -25,13 +27,19 @@ export default function DashboardLayout({
       return;
     }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    setRole(data?.role || null);
+    if (error || !data?.role) {
+      setRole(null);
+    } else {
+      setRole(data.role as Role);
+    }
+
+    setLoadingRole(false);
   }
 
   async function handleLogout() {
@@ -42,6 +50,14 @@ export default function DashboardLayout({
   useEffect(() => {
     loadRole();
   }, []);
+
+  if (loadingRole) {
+    return (
+      <div style={{ padding: 32, fontFamily: "Arial, sans-serif" }}>
+        Carregando...
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif" }}>
@@ -63,23 +79,24 @@ export default function DashboardLayout({
               <Link href="/dashboard/turmas">Turmas</Link>
               <Link href="/dashboard/professores">Professores</Link>
               <Link href="/dashboard/criancas">Crianças</Link>
-              <Link href="/dashboard/relatorios">Relatórios</Link>
               <Link href="/dashboard/responsaveis">Responsáveis</Link>
+              <Link href="/dashboard/relatorios">Relatórios</Link>
+              <Link href="/dashboard/agenda">Agenda</Link>
             </>
           )}
 
           {role === "teacher" && (
             <>
               <Link href="/dashboard/minhas-turmas">Minhas turmas</Link>
+              <Link href="/dashboard/agenda">Agenda</Link>
             </>
           )}
 
-          {(role === "admin" || role === "supervisor" || role === "teacher") && (
-            <Link href="/dashboard/agenda">Agenda</Link>
-          )}
           {role === "guardian" && (
-  <Link href="/dashboard/meu-filho">Meu filho</Link>
-)}
+            <>
+              <Link href="/dashboard/meu-filho">Meu filho</Link>
+            </>
+          )}
         </div>
 
         <button
