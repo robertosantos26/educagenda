@@ -201,6 +201,18 @@ export default function CriancasPage() {
     return link?.profiles?.[0] || null;
   }
 
+  function hasImportantNote(note: string | null) {
+    if (!note) return false;
+    const normalized = note.toLowerCase();
+    return (
+      normalized.includes("alerg") ||
+      normalized.includes("restri") ||
+      normalized.includes("medic") ||
+      normalized.includes("atenção") ||
+      normalized.includes("cuidado")
+    );
+  }
+
   useEffect(() => {
     loadClasses();
     loadStudents();
@@ -304,41 +316,65 @@ export default function CriancasPage() {
         {students.length === 0 ? (
           <p style={emptyStyle}>Nenhuma criança cadastrada ainda.</p>
         ) : (
-          <div style={listStyle}>
+          <div style={childrenGridStyle}>
             {students.map((student) => {
               const guardian = getGuardian(student.id);
+              const important = hasImportantNote(student.notes);
 
               return (
-                <div key={student.id} style={studentCardStyle}>
-                  <div style={{ flex: 1 }}>
-                    <strong style={{ fontSize: 18 }}>{student.name}</strong>
+                <div key={student.id} style={childProfileCardStyle}>
+                  <div style={childTopRowStyle}>
+                    <div style={avatarStyle}>
+                      {student.name.charAt(0).toUpperCase()}
+                    </div>
 
-                    <p style={infoTextStyle}>
-                      <strong>Turma:</strong> {getClassName(student.class_id)}
-                    </p>
-
-                    <p style={infoTextStyle}>
-                      <strong>Nascimento:</strong>{" "}
-                      {student.birth_date || "Não informado"}
-                    </p>
-
-                    <p style={infoTextStyle}>
-                      <strong>Responsável:</strong>{" "}
-                      {guardian
-                        ? `${guardian.name}${guardian.phone ? ` • ${guardian.phone}` : ""}`
-                        : "Nenhum responsável vinculado"}
-                    </p>
-
-                    <p style={infoTextStyle}>
-                      <strong>Endereço:</strong>{" "}
-                      {student.address || "Não informado"}
-                    </p>
-
-                    <p style={infoTextStyle}>
-                      <strong>Observações:</strong>{" "}
-                      {student.notes || "Sem observações"}
-                    </p>
+                    <div>
+                      <strong style={childNameStyle}>{student.name}</strong>
+                      <p style={classBadgeStyle}>
+                        🏫 {getClassName(student.class_id)}
+                      </p>
+                    </div>
                   </div>
+
+                  <div style={infoGridStyle}>
+                    <InfoLine
+                      icon="🎂"
+                      label="Nascimento"
+                      value={student.birth_date || "Não informado"}
+                    />
+
+                    <InfoLine
+                      icon="👨‍👩‍👧"
+                      label="Responsável"
+                      value={
+                        guardian
+                          ? `${guardian.name}${guardian.phone ? ` • ${guardian.phone}` : ""}`
+                          : "Nenhum responsável vinculado"
+                      }
+                    />
+
+                    <InfoLine
+                      icon="📍"
+                      label="Endereço"
+                      value={student.address || "Não informado"}
+                    />
+                  </div>
+
+                  {student.notes ? (
+                    <div
+                      style={{
+                        ...noteBoxStyle,
+                        background: important ? "#fef2f2" : "#fffbeb",
+                        borderColor: important ? "#fecaca" : "#fde68a",
+                        color: important ? "#991b1b" : "#92400e",
+                      }}
+                    >
+                      <strong>{important ? "⚠️ Atenção:" : "📝 Observação:"}</strong>{" "}
+                      {student.notes}
+                    </div>
+                  ) : (
+                    <div style={noNoteBoxStyle}>Sem observações registradas</div>
+                  )}
 
                   <div style={actionsStyle}>
                     <Link
@@ -360,6 +396,26 @@ export default function CriancasPage() {
             })}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function InfoLine({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div style={infoLineStyle}>
+      <span style={iconStyle}>{icon}</span>
+      <div>
+        <p style={infoLabelStyle}>{label}</p>
+        <p style={infoValueStyle}>{value}</p>
       </div>
     </div>
   );
@@ -452,35 +508,112 @@ const buttonSecondary = {
   fontWeight: 700,
 };
 
-const listStyle = {
+const childrenGridStyle = {
   display: "grid",
-  gap: 14,
-};
-
-const studentCardStyle = {
-  padding: 18,
-  border: "1px solid #e5e7eb",
-  borderRadius: 14,
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
   gap: 18,
-  flexWrap: "wrap" as const,
 };
 
-const infoTextStyle = {
-  margin: "7px 0",
-  color: "#4b5563",
+const childProfileCardStyle = {
+  padding: 20,
+  border: "1px solid #e5e7eb",
+  borderRadius: 18,
+  background: "#ffffff",
+  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.05)",
+};
+
+const childTopRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  marginBottom: 18,
+};
+
+const avatarStyle = {
+  width: 48,
+  height: 48,
+  borderRadius: 16,
+  background: "#dbeafe",
+  color: "#1d4ed8",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: 800,
+  fontSize: 20,
+};
+
+const childNameStyle = {
+  fontSize: 19,
+  display: "block",
+  marginBottom: 6,
+};
+
+const classBadgeStyle = {
+  margin: 0,
+  display: "inline-block",
+  background: "#f3f4f6",
+  padding: "6px 10px",
+  borderRadius: 999,
+  color: "#374151",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const infoGridStyle = {
+  display: "grid",
+  gap: 12,
+  marginBottom: 16,
+};
+
+const infoLineStyle = {
+  display: "flex",
+  gap: 10,
+  alignItems: "flex-start",
+};
+
+const iconStyle = {
+  width: 24,
+};
+
+const infoLabelStyle = {
+  margin: 0,
+  color: "#6b7280",
+  fontSize: 12,
+  fontWeight: 700,
+  textTransform: "uppercase" as const,
+};
+
+const infoValueStyle = {
+  margin: "3px 0 0",
+  color: "#111827",
+  fontSize: 14,
+};
+
+const noteBoxStyle = {
+  border: "1px solid",
+  borderRadius: 12,
+  padding: 12,
+  fontSize: 14,
+  marginBottom: 16,
+};
+
+const noNoteBoxStyle = {
+  border: "1px dashed #d1d5db",
+  borderRadius: 12,
+  padding: 12,
+  fontSize: 14,
+  color: "#6b7280",
+  marginBottom: 16,
 };
 
 const actionsStyle = {
   display: "flex",
-  flexDirection: "column" as const,
   gap: 10,
-  minWidth: 160,
+  flexWrap: "wrap" as const,
 };
 
 const historyButtonStyle = {
+  flex: 1,
   padding: "10px 14px",
   borderRadius: 10,
   background: "#eff6ff",
@@ -491,6 +624,7 @@ const historyButtonStyle = {
 };
 
 const editButtonStyle = {
+  flex: 1,
   padding: "10px 14px",
   borderRadius: 10,
   border: "none",
