@@ -111,7 +111,7 @@ export default function CriancasPage() {
   }, []);
 
   return (
-    <div style={card}>
+<div style={cardStyle}>
   <h2 style={title}>Cadastrar criança</h2>
 
   <input
@@ -150,7 +150,7 @@ export default function CriancasPage() {
 </div>
   );
 
-  const card = {
+const cardStyle = {
   background: "#ffffff",
   borderRadius: 16,
   padding: 24,
