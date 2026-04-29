@@ -27,6 +27,8 @@ export default function ProfessoresPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
 
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -120,6 +122,34 @@ export default function ProfessoresPage() {
     loadTeachers();
   }
 
+  async function createAccess(teacherId: string) {
+    const password = passwords[teacherId];
+
+    if (!password) {
+      setMessage("Digite uma senha provisória.");
+      return;
+    }
+
+    const response = await fetch("/api/create-teacher-auth", {
+      method: "POST",
+      body: JSON.stringify({
+        teacherId,
+        password,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setMessage(result.error);
+      return;
+    }
+
+    setMessage("Acesso criado com sucesso.");
+    setPasswords((prev) => ({ ...prev, [teacherId]: "" }));
+    loadTeachers();
+  }
+
   useEffect(() => {
     loadClasses();
     loadTeachers();
@@ -127,27 +157,26 @@ export default function ProfessoresPage() {
 
   return (
     <div>
-      <div style={cardStyle}>
-        <div style={headerStyle}>
+      <div style={card}>
+        <div style={header}>
           <div>
-            <h1 style={title}>Professores</h1>
-            <p style={subtitle}>Gerencie os professores da escola</p>
+            <h1>Professores</h1>
+            <p style={{ color: "#666" }}>
+              Gerencie os professores da escola
+            </p>
           </div>
 
-          <button
-            onClick={() => setShowForm(!showForm)}
-            style={addButton}
-          >
+          <button onClick={() => setShowForm(!showForm)} style={addButton}>
             + Novo professor
           </button>
         </div>
 
-        {message && <p style={{ marginTop: 10 }}>{message}</p>}
+        {message && <p>{message}</p>}
       </div>
 
       {showForm && (
-        <div style={cardStyle}>
-          <h2 style={sectionTitle}>Cadastrar professor</h2>
+        <div style={card}>
+          <h2>Cadastrar professor</h2>
 
           <input
             placeholder="Nome"
@@ -190,14 +219,44 @@ export default function ProfessoresPage() {
         </div>
       )}
 
-      <div style={cardStyle}>
-        <h2 style={sectionTitle}>Professores cadastrados</h2>
+      <div style={card}>
+        <h2>Professores cadastrados</h2>
 
         {teachers.map((teacher) => (
           <div key={teacher.id} style={item}>
-            <strong>{teacher.name}</strong>
-            <br />
-            {teacher.email}
+            <div>
+              <strong>{teacher.name}</strong>
+              <br />
+              {teacher.email}
+            </div>
+
+            {!teacher.access_created && (
+              <div style={{ marginTop: 10 }}>
+                <input
+                  type="password"
+                  placeholder="Senha provisória"
+                  value={passwords[teacher.id] || ""}
+                  onChange={(e) =>
+                    setPasswords({
+                      ...passwords,
+                      [teacher.id]: e.target.value,
+                    })
+                  }
+                  style={input}
+                />
+
+                <button
+                  onClick={() => createAccess(teacher.id)}
+                  style={button}
+                >
+                  Criar acesso
+                </button>
+              </div>
+            )}
+
+            {teacher.access_created && (
+              <p style={{ color: "green" }}>Acesso criado</p>
+            )}
           </div>
         ))}
       </div>
@@ -205,25 +264,17 @@ export default function ProfessoresPage() {
   );
 }
 
-const cardStyle = {
+const card = {
   background: "#fff",
   padding: 20,
   borderRadius: 12,
   marginBottom: 20,
 };
 
-const headerStyle = {
+const header = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-};
-
-const title = {
-  fontSize: 24,
-};
-
-const subtitle = {
-  color: "#666",
 };
 
 const addButton = {
@@ -233,10 +284,6 @@ const addButton = {
   padding: "10px 16px",
   borderRadius: 8,
   cursor: "pointer",
-};
-
-const sectionTitle = {
-  marginBottom: 10,
 };
 
 const input = {
