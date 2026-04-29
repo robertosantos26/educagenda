@@ -75,6 +75,7 @@ export default function DashboardLayout({
               <MenuLink href="/dashboard/turmas">Turmas</MenuLink>
               <MenuLink href="/dashboard/professores">Professores</MenuLink>
               <MenuLink href="/dashboard/criancas">Crianças</MenuLink>
+              <MenuLink href="/dashboard/responsaveis">Responsáveis</MenuLink>
               <MenuLink href="/dashboard/agenda">Agenda individual</MenuLink>
               <MenuLink href="/dashboard/agenda-turma">Agenda por turma</MenuLink>
               <MenuLink href="/dashboard/relatorios">Relatórios</MenuLink>
