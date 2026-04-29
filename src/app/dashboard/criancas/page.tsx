@@ -27,7 +27,10 @@ export default function CriancasPage() {
   const [message, setMessage] = useState("");
 
   async function getSchoolId() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) return null;
 
     const { data: profile } = await supabase
@@ -111,65 +114,109 @@ export default function CriancasPage() {
   }, []);
 
   return (
-<div style={cardStyle}>
-  <h2 style={title}>Cadastrar criança</h2>
+    <div>
+      <div style={cardStyle}>
+        <h1 style={pageTitle}>Crianças</h1>
+        <p style={subtitle}>Cadastre as crianças e vincule cada uma a uma turma.</p>
 
-  <input
-    type="text"
-    placeholder="Nome da criança"
-    value={name}
-    onChange={(e) => setName(e.target.value)}
-    style={input}
-  />
+        <h2 style={sectionTitle}>Cadastrar criança</h2>
 
-  <input
-    type="date"
-    value={birthDate}
-    onChange={(e) => setBirthDate(e.target.value)}
-    style={input}
-  />
+        <input
+          type="text"
+          placeholder="Nome da criança"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={inputStyle}
+        />
 
-  <select
-    value={classId}
-    onChange={(e) => setClassId(e.target.value)}
-    style={input}
-  >
-    <option value="">Selecione a turma</option>
-    {classes.map((item) => (
-      <option key={item.id} value={item.id}>
-        {item.name}
-      </option>
-    ))}
-  </select>
+        <input
+          type="date"
+          value={birthDate}
+          onChange={(e) => setBirthDate(e.target.value)}
+          style={inputStyle}
+        />
 
-  <button onClick={createStudent} style={buttonPrimary}>
-    Cadastrar criança
-  </button>
+        <select
+          value={classId}
+          onChange={(e) => setClassId(e.target.value)}
+          style={inputStyle}
+        >
+          <option value="">Selecione a turma</option>
+          {classes.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
 
-  {message && <p style={{ marginTop: 12 }}>{message}</p>}
-</div>
+        <button
+          onClick={createStudent}
+          disabled={loading}
+          style={buttonPrimary}
+        >
+          {loading ? "Salvando..." : "Cadastrar criança"}
+        </button>
+
+        {message && <p style={messageStyle}>{message}</p>}
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={sectionTitle}>Crianças cadastradas</h2>
+
+        {students.length === 0 ? (
+          <p style={emptyStyle}>Nenhuma criança cadastrada ainda.</p>
+        ) : (
+          <div style={listStyle}>
+            {students.map((student) => {
+              const turma = classes.find((c) => c.id === student.class_id);
+
+              return (
+                <div key={student.id} style={studentCardStyle}>
+                  <strong>{student.name}</strong>
+                  <span>Turma: {turma?.name || "Sem turma"}</span>
+                  <span>
+                    Nascimento: {student.birth_date || "Não informado"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
+}
 
 const cardStyle = {
   background: "#ffffff",
-  borderRadius: 16,
-  padding: 24,
-  boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
-  marginBottom: 32,
+  borderRadius: 18,
+  padding: 28,
+  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+  marginBottom: 28,
 };
 
-const title = {
-  marginBottom: 16,
+const pageTitle = {
+  fontSize: 28,
+  marginBottom: 6,
+};
+
+const subtitle = {
+  color: "#6b7280",
+  marginBottom: 28,
+};
+
+const sectionTitle = {
   fontSize: 20,
+  marginBottom: 18,
 };
 
-const input = {
+const inputStyle = {
   display: "block",
   width: "100%",
-  maxWidth: 400,
+  maxWidth: 420,
   padding: 12,
   borderRadius: 10,
-  border: "1px solid #e5e7eb",
+  border: "1px solid #d1d5db",
   marginBottom: 12,
   fontSize: 14,
 };
@@ -181,6 +228,28 @@ const buttonPrimary = {
   background: "#2563eb",
   color: "white",
   cursor: "pointer",
-  fontWeight: "bold",
+  fontWeight: 700,
 };
-}
+
+const messageStyle = {
+  marginTop: 14,
+  color: "#374151",
+};
+
+const emptyStyle = {
+  color: "#6b7280",
+};
+
+const listStyle = {
+  display: "grid",
+  gap: 12,
+};
+
+const studentCardStyle = {
+  padding: 16,
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: 6,
+};
