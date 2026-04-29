@@ -225,23 +225,20 @@ export default function AgendaPage() {
   }
 
   return (
-    <div style={{ maxWidth: 900 }}>
-      <h1>Agenda diária</h1>
+    <div>
+      <div style={cardStyle}>
+        <h1 style={pageTitle}>Agenda diária</h1>
+        <p style={subtitle}>
+          Preencha rapidamente a rotina da criança usando opções prontas.
+        </p>
 
-      <p>
-        Perfil atual: <strong>{role || "carregando..."}</strong>
-      </p>
-
-      <section style={{ marginTop: 24 }}>
-        <h2>Selecionar criança</h2>
-
+        <label style={labelStyle}>Criança</label>
         <select
           value={selectedStudentId}
           onChange={(e) => setSelectedStudentId(e.target.value)}
           style={inputStyle}
         >
           <option value="">Selecione uma criança</option>
-
           {students.map((student) => (
             <option key={student.id} value={student.id}>
               {student.name} — {getClassName(student.class_id)}
@@ -250,66 +247,219 @@ export default function AgendaPage() {
         </select>
 
         {students.length === 0 && (
-          <p>Nenhuma criança disponível para este usuário.</p>
+          <p style={warningStyle}>Nenhuma criança disponível para este usuário.</p>
         )}
-      </section>
+      </div>
 
-      <section style={{ marginTop: 24 }}>
-        <h2>Informações do dia</h2>
+      <div style={cardStyle}>
+        <h2 style={sectionTitle}>Informações do dia</h2>
 
-        <textarea placeholder="Alimentação" value={food} onChange={(e) => setFood(e.target.value)} style={textareaStyle} />
-        <textarea placeholder="Sono" value={sleep} onChange={(e) => setSleep(e.target.value)} style={textareaStyle} />
-        <textarea placeholder="Banheiro / fralda" value={bathroom} onChange={(e) => setBathroom(e.target.value)} style={textareaStyle} />
-
-        <input
-          type="text"
-          placeholder="Humor. Ex: tranquilo, choroso, animado..."
-          value={mood}
-          onChange={(e) => setMood(e.target.value)}
-          style={inputStyle}
+        <OptionGroup
+          title="Alimentação"
+          value={food}
+          onChange={setFood}
+          options={["Comeu tudo", "Comeu bem", "Comeu pouco", "Não comeu"]}
         />
 
-        <textarea placeholder="Atividades realizadas" value={activities} onChange={(e) => setActivities(e.target.value)} style={textareaStyle} />
-        <textarea placeholder="Observações internas" value={observations} onChange={(e) => setObservations(e.target.value)} style={textareaStyle} />
-        <textarea placeholder="Recado para os pais" value={messageToParents} onChange={(e) => setMessageToParents(e.target.value)} style={textareaStyle} />
+        <OptionGroup
+          title="Sono"
+          value={sleep}
+          onChange={setSleep}
+          options={["Dormiu bem", "Dormiu pouco", "Não dormiu", "Sono tranquilo"]}
+        />
+
+        <OptionGroup
+          title="Banheiro / fralda"
+          value={bathroom}
+          onChange={setBathroom}
+          options={["Normal", "Trocou fralda", "Usou banheiro", "Sem evacuação"]}
+        />
+
+        <OptionGroup
+          title="Humor"
+          value={mood}
+          onChange={setMood}
+          options={["Feliz", "Tranquilo", "Agitado", "Choroso", "Irritado"]}
+        />
+
+        <OptionGroup
+          title="Atividades"
+          value={activities}
+          onChange={setActivities}
+          options={[
+            "Participou bem",
+            "Brincou com colegas",
+            "Fez atividade pedagógica",
+            "Teve dificuldade na atividade",
+          ]}
+        />
+
+        <OptionGroup
+          title="Observações internas"
+          value={observations}
+          onChange={setObservations}
+          options={[
+            "Sem observações",
+            "Precisou de atenção extra",
+            "Teve boa participação",
+            "Demonstrou cansaço",
+          ]}
+        />
+
+        <div style={{ marginTop: 24 }}>
+          <label style={labelStyle}>Recado para os pais</label>
+          <textarea
+            placeholder="Escreva um recado livre para os pais..."
+            value={messageToParents}
+            onChange={(e) => setMessageToParents(e.target.value)}
+            style={textareaStyle}
+          />
+        </div>
 
         <button
           onClick={saveAgenda}
           disabled={loading || students.length === 0}
           style={{
-            padding: "12px 20px",
-            borderRadius: 8,
-            border: "none",
+            ...buttonPrimary,
+            background: loading || students.length === 0 ? "#9ca3af" : "#2563eb",
             cursor: loading || students.length === 0 ? "not-allowed" : "pointer",
-            background: loading || students.length === 0 ? "#9ca3af" : "#111827",
-            color: "white",
-            marginTop: 12,
           }}
         >
           {loading ? "Salvando..." : "Salvar agenda"}
         </button>
 
-        {message && <p style={{ marginTop: 16 }}>{message}</p>}
-      </section>
+        {message && <p style={messageStyle}>{message}</p>}
+      </div>
     </div>
   );
 }
 
+function OptionGroup({
+  title,
+  value,
+  onChange,
+  options,
+}: {
+  title: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+}) {
+  return (
+    <div style={optionGroupStyle}>
+      <p style={labelStyle}>{title}</p>
+
+      <div style={optionsGridStyle}>
+        {options.map((option) => {
+          const selected = value === option;
+
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onChange(option)}
+              style={{
+                ...optionButtonStyle,
+                background: selected ? "#2563eb" : "#f9fafb",
+                color: selected ? "white" : "#111827",
+                borderColor: selected ? "#2563eb" : "#e5e7eb",
+              }}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const cardStyle = {
+  background: "#ffffff",
+  borderRadius: 18,
+  padding: 28,
+  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
+  marginBottom: 28,
+};
+
+const pageTitle = {
+  fontSize: 28,
+  marginBottom: 6,
+};
+
+const subtitle = {
+  color: "#6b7280",
+  marginBottom: 28,
+};
+
+const sectionTitle = {
+  fontSize: 22,
+  marginBottom: 22,
+};
+
+const labelStyle = {
+  display: "block",
+  fontWeight: 700,
+  marginBottom: 10,
+  color: "#111827",
+};
+
 const inputStyle = {
-  padding: 12,
+  display: "block",
   width: "100%",
-  maxWidth: 500,
-  border: "1px solid #ccc",
-  borderRadius: 8,
+  maxWidth: 520,
+  padding: 12,
+  borderRadius: 10,
+  border: "1px solid #d1d5db",
   marginBottom: 12,
+  fontSize: 14,
 };
 
 const textareaStyle = {
-  padding: 12,
+  display: "block",
   width: "100%",
-  maxWidth: 500,
-  minHeight: 80,
-  border: "1px solid #ccc",
-  borderRadius: 8,
-  marginBottom: 12,
+  maxWidth: 620,
+  minHeight: 110,
+  padding: 12,
+  borderRadius: 10,
+  border: "1px solid #d1d5db",
+  marginBottom: 18,
+  fontSize: 14,
+};
+
+const optionGroupStyle = {
+  marginBottom: 22,
+};
+
+const optionsGridStyle = {
+  display: "flex",
+  flexWrap: "wrap" as const,
+  gap: 10,
+};
+
+const optionButtonStyle = {
+  padding: "10px 14px",
+  borderRadius: 999,
+  border: "1px solid #e5e7eb",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const buttonPrimary = {
+  padding: "12px 20px",
+  borderRadius: 10,
+  border: "none",
+  color: "white",
+  fontWeight: 700,
+  marginTop: 16,
+};
+
+const messageStyle = {
+  marginTop: 14,
+  color: "#374151",
+};
+
+const warningStyle = {
+  color: "#b45309",
+  marginTop: 8,
 };
