@@ -8,30 +8,22 @@ type Student = {
   name: string;
 };
 
-type Guardian = {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-};
-
 type GuardianLink = {
   student_id: string;
   guardian_id: string;
   relationship: string | null;
-  students?: {
+  students: {
     name: string;
-  }[] | null;
-  profiles?: {
+  } | null;
+  profiles: {
     name: string;
     email: string | null;
     phone: string | null;
-  }[] | null;
+  } | null;
 };
 
 export default function ResponsaveisPage() {
   const [showForm, setShowForm] = useState(false);
-
   const [students, setStudents] = useState<Student[]>([]);
   const [guardianLinks, setGuardianLinks] = useState<GuardianLink[]>([]);
 
@@ -63,7 +55,6 @@ export default function ResponsaveisPage() {
 
   async function loadStudents() {
     const schoolId = await getSchoolId();
-
     if (!schoolId) return;
 
     const { data } = await supabase
@@ -77,15 +68,24 @@ export default function ResponsaveisPage() {
   }
 
   async function loadGuardians() {
-    const { data } = await supabase
+    const schoolId = await getSchoolId();
+    if (!schoolId) return;
+
+    const { data, error } = await supabase
       .from("student_guardians")
       .select(`
         student_id,
         guardian_id,
         relationship,
-        students(name),
-        profiles(name, email, phone)
-      `);
+        students!student_guardians_student_id_fkey(name),
+        profiles!student_guardians_guardian_id_fkey(name, email, phone)
+      `)
+      .eq("profiles.school_id", schoolId);
+
+    if (error) {
+      setMessage("Erro ao carregar responsáveis: " + error.message);
+      return;
+    }
 
     setGuardianLinks((data || []) as unknown as GuardianLink[]);
   }
@@ -182,43 +182,12 @@ export default function ResponsaveisPage() {
         <div style={cardStyle}>
           <h2 style={sectionTitle}>Cadastrar responsável</h2>
 
-          <input
-            type="text"
-            placeholder="Nome do responsável"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={inputStyle}
-          />
+          <input type="text" placeholder="Nome do responsável" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+          <input type="email" placeholder="E-mail de acesso" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+          <input type="text" placeholder="Telefone" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
+          <input type="password" placeholder="Senha provisória" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
 
-          <input
-            type="email"
-            placeholder="E-mail de acesso"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
-          />
-
-          <input
-            type="text"
-            placeholder="Telefone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            style={inputStyle}
-          />
-
-          <input
-            type="password"
-            placeholder="Senha provisória"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
-          />
-
-          <select
-            value={relationship}
-            onChange={(e) => setRelationship(e.target.value)}
-            style={inputStyle}
-          >
+          <select value={relationship} onChange={(e) => setRelationship(e.target.value)} style={inputStyle}>
             <option value="Mãe">Mãe</option>
             <option value="Pai">Pai</option>
             <option value="Avó">Avó</option>
@@ -227,11 +196,7 @@ export default function ResponsaveisPage() {
             <option value="Outro">Outro</option>
           </select>
 
-          <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            style={inputStyle}
-          >
+          <select value={studentId} onChange={(e) => setStudentId(e.target.value)} style={inputStyle}>
             <option value="">Selecione a criança</option>
             {students.map((student) => (
               <option key={student.id} value={student.id}>
@@ -274,14 +239,11 @@ export default function ResponsaveisPage() {
         ) : (
           <div style={gridStyle}>
             {guardianLinks.map((item) => {
-              const guardian = item.profiles?.[0];
-              const child = item.students?.[0];
+              const guardian = item.profiles;
+              const child = item.students;
 
               return (
-                <div
-                  key={`${item.guardian_id}-${item.student_id}`}
-                  style={guardianCardStyle}
-                >
+                <div key={`${item.guardian_id}-${item.student_id}`} style={guardianCardStyle}>
                   <div style={topRowStyle}>
                     <div style={avatarStyle}>
                       {guardian?.name?.charAt(0).toUpperCase() || "R"}
@@ -295,23 +257,9 @@ export default function ResponsaveisPage() {
                     </div>
                   </div>
 
-                  <InfoLine
-                    icon="📞"
-                    label="Telefone"
-                    value={guardian?.phone || "Não informado"}
-                  />
-
-                  <InfoLine
-                    icon="👶"
-                    label="Criança vinculada"
-                    value={child?.name || "Não informada"}
-                  />
-
-                  <InfoLine
-                    icon="🔗"
-                    label="Parentesco"
-                    value={item.relationship || "Responsável"}
-                  />
+                  <InfoLine icon="📞" label="Telefone" value={guardian?.phone || "Não informado"} />
+                  <InfoLine icon="👶" label="Criança vinculada" value={child?.name || "Não informada"} />
+                  <InfoLine icon="🔗" label="Parentesco" value={item.relationship || "Responsável"} />
 
                   <span style={statusBadgeStyle}>✅ Acesso criado</span>
                 </div>
@@ -324,15 +272,7 @@ export default function ResponsaveisPage() {
   );
 }
 
-function InfoLine({
-  icon,
-  label,
-  value,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-}) {
+function InfoLine({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div style={infoLineStyle}>
       <span style={iconStyle}>{icon}</span>
@@ -344,163 +284,25 @@ function InfoLine({
   );
 }
 
-const cardStyle = {
-  background: "#ffffff",
-  borderRadius: 18,
-  padding: 28,
-  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
-  marginBottom: 28,
-};
-
-const headerRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 20,
-  flexWrap: "wrap" as const,
-};
-
-const pageTitle = {
-  fontSize: 28,
-  marginBottom: 6,
-};
-
-const subtitle = {
-  color: "#6b7280",
-  marginBottom: 0,
-};
-
-const sectionTitle = {
-  fontSize: 20,
-  marginBottom: 18,
-};
-
-const inputStyle = {
-  display: "block",
-  width: "100%",
-  maxWidth: 520,
-  padding: 12,
-  borderRadius: 10,
-  border: "1px solid #d1d5db",
-  marginBottom: 12,
-  fontSize: 14,
-};
-
-const addButtonStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  padding: "12px 18px",
-  borderRadius: 12,
-  border: "none",
-  background: "#16a34a",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const buttonPrimary = {
-  padding: "12px 18px",
-  borderRadius: 10,
-  border: "none",
-  color: "white",
-  fontWeight: 700,
-};
-
-const buttonSecondary = {
-  padding: "12px 18px",
-  borderRadius: 10,
-  border: "1px solid #d1d5db",
-  background: "white",
-  color: "#374151",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  gap: 18,
-};
-
-const guardianCardStyle = {
-  padding: 20,
-  border: "1px solid #e5e7eb",
-  borderRadius: 18,
-  background: "#ffffff",
-  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.05)",
-};
-
-const topRowStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 14,
-  marginBottom: 18,
-};
-
-const avatarStyle = {
-  width: 48,
-  height: 48,
-  borderRadius: 16,
-  background: "#fef3c7",
-  color: "#92400e",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 800,
-  fontSize: 20,
-};
-
-const nameStyle = {
-  fontSize: 18,
-  display: "block",
-};
-
-const infoTextStyle = {
-  margin: "6px 0 0",
-  color: "#6b7280",
-};
-
-const infoLineStyle = {
-  display: "flex",
-  gap: 10,
-  alignItems: "flex-start",
-  marginBottom: 12,
-};
-
-const iconStyle = {
-  width: 24,
-};
-
-const infoLabelStyle = {
-  margin: 0,
-  color: "#6b7280",
-  fontSize: 12,
-  fontWeight: 700,
-  textTransform: "uppercase" as const,
-};
-
-const infoValueStyle = {
-  margin: "3px 0 0",
-  color: "#111827",
-  fontSize: 14,
-};
-
-const statusBadgeStyle = {
-  display: "inline-block",
-  padding: "7px 10px",
-  borderRadius: 999,
-  fontWeight: 700,
-  fontSize: 13,
-  background: "#dcfce7",
-  color: "#166534",
-};
-
-const messageStyle = {
-  marginTop: 14,
-  color: "#374151",
-};
-
-const emptyStyle = {
-  color: "#6b7280",
-};
+const cardStyle = { background: "#ffffff", borderRadius: 18, padding: 28, boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)", marginBottom: 28 };
+const headerRowStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20, flexWrap: "wrap" as const };
+const pageTitle = { fontSize: 28, marginBottom: 6 };
+const subtitle = { color: "#6b7280", marginBottom: 0 };
+const sectionTitle = { fontSize: 20, marginBottom: 18 };
+const inputStyle = { display: "block", width: "100%", maxWidth: 520, padding: 12, borderRadius: 10, border: "1px solid #d1d5db", marginBottom: 12, fontSize: 14 };
+const addButtonStyle = { display: "flex", alignItems: "center", gap: 8, padding: "12px 18px", borderRadius: 12, border: "none", background: "#16a34a", color: "white", cursor: "pointer", fontWeight: 700 };
+const buttonPrimary = { padding: "12px 18px", borderRadius: 10, border: "none", color: "white", fontWeight: 700 };
+const buttonSecondary = { padding: "12px 18px", borderRadius: 10, border: "1px solid #d1d5db", background: "white", color: "#374151", cursor: "pointer", fontWeight: 700 };
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18 };
+const guardianCardStyle = { padding: 20, border: "1px solid #e5e7eb", borderRadius: 18, background: "#ffffff", boxShadow: "0 4px 14px rgba(15, 23, 42, 0.05)" };
+const topRowStyle = { display: "flex", alignItems: "center", gap: 14, marginBottom: 18 };
+const avatarStyle = { width: 48, height: 48, borderRadius: 16, background: "#fef3c7", color: "#92400e", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 20 };
+const nameStyle = { fontSize: 18, display: "block" };
+const infoTextStyle = { margin: "6px 0 0", color: "#6b7280" };
+const infoLineStyle = { display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 12 };
+const iconStyle = { width: 24 };
+const infoLabelStyle = { margin: 0, color: "#6b7280", fontSize: 12, fontWeight: 700, textTransform: "uppercase" as const };
+const infoValueStyle = { margin: "3px 0 0", color: "#111827", fontSize: 14 };
+const statusBadgeStyle = { display: "inline-block", padding: "7px 10px", borderRadius: 999, fontWeight: 700, fontSize: 13, background: "#dcfce7", color: "#166534" };
+const messageStyle = { marginTop: 14, color: "#374151" };
+const emptyStyle = { color: "#6b7280" };
