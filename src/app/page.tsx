@@ -2,101 +2,129 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [loading, setLoading] = useState(false);
+export default function LoginPage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
-  async function login(formData: FormData) {
-    setLoading(true);
-    setMessage("");
-    const email = String(formData.get("email"));
-    const password = String(formData.get("password"));
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-
-    if (error) return setMessage(error.message);
-    window.location.href = "/dashboard";
-  }
-
-  async function registerSchool(formData: FormData) {
-    setLoading(true);
+  async function handleLogin() {
     setMessage("");
 
-    const schoolName = String(formData.get("schoolName"));
-    const cnpj = String(formData.get("cnpj"));
-    const name = String(formData.get("name"));
-    const email = String(formData.get("email"));
-    const password = String(formData.get("password"));
-    const phone = String(formData.get("phone"));
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-    if (authError || !authData.user) {
-      setLoading(false);
-      return setMessage(authError?.message || "Não foi possível criar o usuário.");
-    }
-
-    const { data: school, error: schoolError } = await supabase
-      .from("schools")
-      .insert({ name: schoolName, cnpj, email, phone })
-      .select()
-      .single();
-
-    if (schoolError || !school) {
-      setLoading(false);
-      return setMessage(schoolError?.message || "Não foi possível criar a escola.");
-    }
-
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: authData.user.id,
-      school_id: school.id,
-      name,
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      phone,
-      role: "admin",
+      password,
     });
 
-    setLoading(false);
+    if (error) {
+      setMessage("Email ou senha inválidos.");
+      return;
+    }
 
-    if (profileError) return setMessage(profileError.message);
-
-    setMessage("Escola criada. Agora faça login.");
-    setMode("login");
+    router.push("/dashboard");
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <section className="w-full max-w-md bg-white rounded-2xl shadow p-6">
-        <h1 className="text-3xl font-bold">Educagenda</h1>
-        <p className="text-gray-600 mt-2">Agenda escolar infantil digital.</p>
+    <div style={container}>
+      {/* 🔵 BACKGROUND COM BLUR */}
+      <div style={background}></div>
 
-        <div className="flex gap-2 mt-6">
-          <button onClick={() => setMode("login")} className={`flex-1 rounded-xl p-3 ${mode === "login" ? "bg-gray-900 text-white" : "bg-gray-100"}`}>Login</button>
-          <button onClick={() => setMode("register")} className={`flex-1 rounded-xl p-3 ${mode === "register" ? "bg-gray-900 text-white" : "bg-gray-100"}`}>Cadastrar escola</button>
-        </div>
+      {/* 🔷 CARD LOGIN */}
+      <div style={card}>
+        <h1 style={title}>Educagenda</h1>
+        <p style={subtitle}>Acesso ao sistema</p>
 
-        {mode === "login" ? (
-          <form action={login} className="mt-6 space-y-3">
-            <input name="email" type="email" placeholder="E-mail" required className="w-full border rounded-xl p-3" />
-            <input name="password" type="password" placeholder="Senha" required className="w-full border rounded-xl p-3" />
-            <button disabled={loading} className="w-full bg-blue-600 text-white rounded-xl p-3">{loading ? "Entrando..." : "Entrar"}</button>
-          </form>
-        ) : (
-          <form action={registerSchool} className="mt-6 space-y-3">
-            <input name="schoolName" placeholder="Nome da escola" required className="w-full border rounded-xl p-3" />
-            <input name="cnpj" placeholder="CNPJ" className="w-full border rounded-xl p-3" />
-            <input name="name" placeholder="Seu nome" required className="w-full border rounded-xl p-3" />
-            <input name="phone" placeholder="Telefone" className="w-full border rounded-xl p-3" />
-            <input name="email" type="email" placeholder="E-mail" required className="w-full border rounded-xl p-3" />
-            <input name="password" type="password" placeholder="Senha" required minLength={6} className="w-full border rounded-xl p-3" />
-            <button disabled={loading} className="w-full bg-blue-600 text-white rounded-xl p-3">{loading ? "Criando..." : "Criar escola"}</button>
-          </form>
-        )}
+        <input
+          type="email"
+          placeholder="Seu e-mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={input}
+        />
 
-        {message && <p className="mt-4 text-sm text-gray-700">{message}</p>}
-      </section>
-    </main>
+        <input
+          type="password"
+          placeholder="Sua senha"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={input}
+        />
+
+        <button onClick={handleLogin} style={button}>
+          Entrar
+        </button>
+
+        {message && <p style={error}>{message}</p>}
+      </div>
+    </div>
   );
 }
+
+const container = {
+  position: "relative" as const,
+  width: "100%",
+  height: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const background = {
+  position: "absolute" as const,
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  backgroundImage: "url('/bg.jpg')",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  filter: "blur(8px)",
+  transform: "scale(1.1)",
+};
+
+const card = {
+  position: "relative" as const,
+  zIndex: 2,
+  background: "rgba(255,255,255,0.9)",
+  padding: 30,
+  borderRadius: 16,
+  width: 320,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+  textAlign: "center" as const,
+};
+
+const title = {
+  marginBottom: 10,
+};
+
+const subtitle = {
+  marginBottom: 20,
+  color: "#555",
+};
+
+const input = {
+  width: "100%",
+  padding: 10,
+  marginBottom: 10,
+  borderRadius: 8,
+  border: "1px solid #ccc",
+};
+
+const button = {
+  width: "100%",
+  padding: 12,
+  borderRadius: 8,
+  border: "none",
+  background: "#2563eb",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const error = {
+  marginTop: 10,
+  color: "red",
+};
