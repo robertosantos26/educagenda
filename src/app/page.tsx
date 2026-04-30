@@ -223,7 +223,7 @@ const containerStyle = {
 const backgroundStyle = {
   position: "absolute" as const,
   inset: 0,
-  backgroundImage: "url('/bg.jpg')",
+  backgroundImage: "url('/criancas-tdah-1024x682.jpg')",
   backgroundSize: "cover",
   backgroundPosition: "center",
   filter: "blur(10px)",
