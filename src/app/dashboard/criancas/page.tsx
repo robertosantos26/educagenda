@@ -26,7 +26,7 @@ type GuardianProfile = {
 
 type GuardianLink = {
   student_id: string;
-  profiles: GuardianProfile[] | null;
+  profiles: GuardianProfile | null;
 };
 
 export default function CriancasPage() {
@@ -89,9 +89,21 @@ export default function CriancasPage() {
   }
 
   async function loadGuardians() {
-    const { data } = await supabase
+    const schoolId = await getSchoolId();
+    if (!schoolId) return;
+
+    const { data, error } = await supabase
       .from("student_guardians")
-      .select("student_id, profiles(name, email, phone)");
+      .select(`
+        student_id,
+        profiles!student_guardians_guardian_id_fkey(name, email, phone)
+      `)
+      .eq("profiles.school_id", schoolId);
+
+    if (error) {
+      setMessage("Erro ao carregar responsáveis: " + error.message);
+      return;
+    }
 
     setGuardianLinks((data || []) as unknown as GuardianLink[]);
   }
@@ -198,12 +210,13 @@ export default function CriancasPage() {
 
   function getGuardian(studentId: string) {
     const link = guardianLinks.find((item) => item.student_id === studentId);
-    return link?.profiles?.[0] || null;
+    return link?.profiles || null;
   }
 
   function hasImportantNote(note: string | null) {
     if (!note) return false;
     const normalized = note.toLowerCase();
+
     return (
       normalized.includes("alerg") ||
       normalized.includes("restri") ||
