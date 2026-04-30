@@ -188,8 +188,7 @@ function getMenuItems(role: string): MenuItem[] {
     return [
       { href: "/dashboard", label: "Início", icon: "🏠" },
       { href: "/dashboard/minhas-turmas", label: "Minhas turmas", icon: "🏫" },
-      { href: "/dashboard/agenda", label: "Agenda individual", icon: "📝" },
-      { href: "/dashboard/agenda-turma", label: "Agenda por turma", icon: "📅" },
+      { href: "/dashboard/agenda", label: "Agenda", icon: "📅" },
       { href: "/dashboard/mensagens", label: "Mensagens", icon: "💬" },
     ];
   }
@@ -200,8 +199,7 @@ function getMenuItems(role: string): MenuItem[] {
     { href: "/dashboard/professores", label: "Professores", icon: "👩‍🏫" },
     { href: "/dashboard/criancas", label: "Crianças", icon: "👶" },
     { href: "/dashboard/responsaveis", label: "Responsáveis", icon: "👨‍👩‍👧" },
-    { href: "/dashboard/agenda", label: "Agenda individual", icon: "📝" },
-    { href: "/dashboard/agenda-turma", label: "Agenda por turma", icon: "📅" },
+    { href: "/dashboard/agenda", label: "Agenda", icon: "📅" },
     { href: "/dashboard/mensagens", label: "Mensagens", icon: "💬" },
   ];
 }
