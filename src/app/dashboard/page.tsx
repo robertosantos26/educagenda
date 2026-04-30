@@ -198,7 +198,7 @@ export default function DashboardPage() {
               title="Agendas feitas hoje"
               value={teacherReportsTodayCount}
               description="Agendas já registradas"
-              href="/dashboard/agenda-turma"
+              href="/dashboard/agenda"
               color="#16a34a"
               background="#f0fdf4"
             />
@@ -208,7 +208,7 @@ export default function DashboardPage() {
               title="Faltam hoje"
               value={teacherPendingTodayCount}
               description="Crianças ainda sem agenda"
-              href="/dashboard/agenda-turma"
+              href="/dashboard/agenda"
               color="#ea580c"
               background="#fff7ed"
             />
@@ -228,10 +228,9 @@ export default function DashboardPage() {
             <h2 style={sectionTitleStyle}>Atalhos rápidos</h2>
 
             <div style={quickActionsGridStyle}>
-              <QuickAction href="/dashboard/agenda-turma" label="Preencher agenda por turma" />
+              <QuickAction href="/dashboard/agenda" label="Preencher agenda" />
               <QuickAction href="/dashboard/minhas-turmas" label="Ver minhas turmas" />
               <QuickAction href="/dashboard/mensagens" label="Ver mensagens dos pais" />
-              <QuickAction href="/dashboard/agenda" label="Agenda individual" />
             </div>
           </div>
         </>
@@ -273,7 +272,7 @@ export default function DashboardPage() {
               title="Agendas hoje"
               value={reportsTodayCount}
               description="Agendas registradas hoje"
-              href="/dashboard/agenda-turma"
+              href="/dashboard/agenda"
               color="#ea580c"
               background="#fff7ed"
             />
@@ -293,7 +292,7 @@ export default function DashboardPage() {
             <h2 style={sectionTitleStyle}>Atalhos rápidos</h2>
 
             <div style={quickActionsGridStyle}>
-              <QuickAction href="/dashboard/agenda-turma" label="Preencher agenda por turma" />
+              <QuickAction href="/dashboard/agenda" label="Preencher agenda" />
               <QuickAction href="/dashboard/criancas" label="Cadastrar criança" />
               <QuickAction href="/dashboard/professores" label="Cadastrar professor" />
               <QuickAction href="/dashboard/turmas" label="Cadastrar turma" />
@@ -326,15 +325,7 @@ function DashboardCard({
   return (
     <Link href={href} style={{ textDecoration: "none" }}>
       <div style={dashboardCardStyle}>
-        <div
-          style={{
-            ...emojiBoxStyle,
-            background,
-            color,
-          }}
-        >
-          {emoji}
-        </div>
+        <div style={{ ...emojiBoxStyle, background, color }}>{emoji}</div>
 
         <p style={cardTitleStyle}>{title}</p>
         <h2 style={{ ...cardValueStyle, color }}>{value}</h2>
