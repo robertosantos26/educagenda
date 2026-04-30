@@ -23,7 +23,7 @@ export default function DashboardLayout({
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  async function loadRole() {
+  async function loadRoleAndPayment() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -33,14 +33,30 @@ export default function DashboardLayout({
       return;
     }
 
-    const { data } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, school_id")
       .eq("id", user.id)
       .single();
 
-    const currentRole = data?.role || "";
+    const currentRole = profile?.role || "";
     setRole(currentRole);
+
+    if (!profile?.school_id) {
+      router.push("/");
+      return;
+    }
+
+    const { data: school } = await supabase
+      .from("schools")
+      .select("status")
+      .eq("id", profile.school_id)
+      .single();
+
+    if (school?.status !== "active") {
+      router.push("/aguardando-pagamento");
+      return;
+    }
 
     if (currentRole === "guardian" && pathname === "/dashboard") {
       router.push("/dashboard/meu-filho");
@@ -57,7 +73,7 @@ export default function DashboardLayout({
   }
 
   useEffect(() => {
-    loadRole();
+    loadRoleAndPayment();
     checkMobile();
 
     window.addEventListener("resize", checkMobile);
