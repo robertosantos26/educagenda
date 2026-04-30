@@ -69,7 +69,9 @@ export default function HomePage() {
       .from("schools")
       .insert({
         name: schoolName,
-        cnpj: cnpj,
+        cnpj,
+        status: "pending",
+        plan: "mensal",
       })
       .select("id")
       .single();
@@ -96,8 +98,7 @@ export default function HomePage() {
       return;
     }
 
-    setMessage("Conta criada com sucesso.");
-    router.push("/dashboard");
+    router.push("/aguardando-pagamento");
   }
 
   return (
@@ -223,7 +224,7 @@ const containerStyle = {
 const backgroundStyle = {
   position: "absolute" as const,
   inset: 0,
-  backgroundImage: "url('/criancas-tdah-1024x682.jpg')",
+  backgroundImage: "url('/bg.jpg')",
   backgroundSize: "cover",
   backgroundPosition: "center",
   filter: "blur(10px)",
