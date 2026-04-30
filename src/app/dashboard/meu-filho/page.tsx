@@ -31,7 +31,10 @@ export default function MeuFilhoPage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [className, setClassName] = useState("");
   const [reports, setReports] = useState<Report[]>([]);
+
+  const [showMessageForm, setShowMessageForm] = useState(false);
   const [parentMessage, setParentMessage] = useState("");
+
   const [message, setMessage] = useState("");
   const [loadingMessage, setLoadingMessage] = useState(false);
 
@@ -138,6 +141,7 @@ export default function MeuFilhoPage() {
     }
 
     setParentMessage("");
+    setShowMessageForm(false);
     setMessage("Recado enviado para a escola.");
     setLoadingMessage(false);
   }
@@ -186,26 +190,60 @@ export default function MeuFilhoPage() {
       </div>
 
       <div style={messageCardStyle}>
-        <h2 style={sectionTitle}>💬 Enviar recado para a escola</h2>
+        <div style={messageHeaderStyle}>
+          <div>
+            <h2 style={sectionTitle}>💬 Recados para a escola</h2>
+            <p style={sectionSubtitle}>
+              Envie uma informação rápida para a equipe da escola quando precisar.
+            </p>
+          </div>
 
-        <textarea
-          placeholder="Ex: Hoje ele acordou um pouco indisposto. Qualquer coisa, podem me avisar."
-          value={parentMessage}
-          onChange={(e) => setParentMessage(e.target.value)}
-          style={textareaStyle}
-        />
+          <button
+            onClick={() => {
+              setShowMessageForm(!showMessageForm);
+              setMessage("");
+            }}
+            style={addButtonStyle}
+          >
+            <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
+            Novo recado
+          </button>
+        </div>
 
-        <button
-          onClick={sendMessageToSchool}
-          disabled={loadingMessage}
-          style={{
-            ...buttonPrimary,
-            background: loadingMessage ? "#9ca3af" : "#2563eb",
-            cursor: loadingMessage ? "not-allowed" : "pointer",
-          }}
-        >
-          {loadingMessage ? "Enviando..." : "Enviar recado"}
-        </button>
+        {showMessageForm && (
+          <div style={formBoxStyle}>
+            <textarea
+              placeholder="Ex: Hoje ele acordou um pouco indisposto. Qualquer coisa, podem me avisar."
+              value={parentMessage}
+              onChange={(e) => setParentMessage(e.target.value)}
+              style={textareaStyle}
+            />
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                onClick={sendMessageToSchool}
+                disabled={loadingMessage}
+                style={{
+                  ...buttonPrimary,
+                  background: loadingMessage ? "#9ca3af" : "#2563eb",
+                  cursor: loadingMessage ? "not-allowed" : "pointer",
+                }}
+              >
+                {loadingMessage ? "Enviando..." : "Enviar recado"}
+              </button>
+
+              <button
+                onClick={() => {
+                  setParentMessage("");
+                  setShowMessageForm(false);
+                }}
+                style={buttonSecondary}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
 
         {message && <p style={messageStyle}>{message}</p>}
       </div>
@@ -244,29 +282,10 @@ export default function MeuFilhoPage() {
                 </div>
 
                 <div style={infoGridStyle}>
-                  <InfoBlock
-                    icon="🍽️"
-                    label="Alimentação"
-                    value={report.food}
-                  />
-
-                  <InfoBlock
-                    icon="😴"
-                    label="Sono"
-                    value={report.sleep}
-                  />
-
-                  <InfoBlock
-                    icon="🚽"
-                    label="Banheiro / fralda"
-                    value={report.bathroom}
-                  />
-
-                  <InfoBlock
-                    icon="🎨"
-                    label="Atividades"
-                    value={report.activities}
-                  />
+                  <InfoBlock icon="🍽️" label="Alimentação" value={report.food} />
+                  <InfoBlock icon="😴" label="Sono" value={report.sleep} />
+                  <InfoBlock icon="🚽" label="Banheiro / fralda" value={report.bathroom} />
+                  <InfoBlock icon="🎨" label="Atividades" value={report.activities} />
                 </div>
 
                 <div style={parentMessageBoxStyle}>
@@ -358,21 +377,55 @@ const messageCardStyle = {
   marginBottom: 28,
 };
 
+const messageHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 16,
+  flexWrap: "wrap" as const,
+};
+
 const sectionTitle = {
   fontSize: 20,
-  marginBottom: 18,
+  marginBottom: 8,
+};
+
+const sectionSubtitle = {
+  margin: 0,
+  color: "#6b7280",
+};
+
+const addButtonStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "12px 18px",
+  borderRadius: 12,
+  border: "none",
+  background: "#16a34a",
+  color: "white",
+  cursor: "pointer",
+  fontWeight: 800,
+};
+
+const formBoxStyle = {
+  marginTop: 22,
+  padding: 18,
+  borderRadius: 16,
+  background: "#f9fafb",
+  border: "1px solid #e5e7eb",
 };
 
 const textareaStyle = {
   display: "block",
   width: "100%",
-  maxWidth: 720,
   minHeight: 110,
   padding: 12,
   borderRadius: 12,
   border: "1px solid #d1d5db",
   marginBottom: 14,
   fontSize: 14,
+  boxSizing: "border-box" as const,
 };
 
 const buttonPrimary = {
@@ -380,7 +433,17 @@ const buttonPrimary = {
   borderRadius: 10,
   border: "none",
   color: "white",
-  fontWeight: 700,
+  fontWeight: 800,
+};
+
+const buttonSecondary = {
+  padding: "12px 18px",
+  borderRadius: 10,
+  border: "1px solid #d1d5db",
+  background: "white",
+  color: "#374151",
+  cursor: "pointer",
+  fontWeight: 800,
 };
 
 const messageStyle = {
