@@ -563,7 +563,7 @@ export default function LandingPage() {
             <a href="/cadastro" className="btn-primary" style={{ background: "white", color: "#2563eb", fontSize: 16, padding: "15px 32px" }}>
               Criar conta grátis
             </a>
-            <a href="https://wa.me/5500000000000" style={{ background: "transparent", color: "white", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 12, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", textDecoration: "none", transition: "all 0.2s" }}>
+            <a href="https://wa.me/5554992700054" style={{ background: "transparent", color: "white", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 12, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", textDecoration: "none", transition: "all 0.2s" }}>
               💬 Falar no WhatsApp
             </a>
           </div>
