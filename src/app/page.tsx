@@ -516,7 +516,7 @@ export default function LandingPage() {
 
           <p style={{ textAlign: "center", marginTop: 32, fontSize: 14, color: "#94a3b8" }}>
             Precisa de proposta customizada?{" "}
-            <a href="https://wa.me/5500000000000" style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>Fale com a gente pelo WhatsApp →</a>
+            <a href="https://wa.me/5554992700054" style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>Fale com a gente pelo WhatsApp →</a>
           </p>
         </div>
       </section>
