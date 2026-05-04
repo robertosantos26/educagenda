@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-export default function HomePage() {
+export default function CadastroPage() {
   const router = useRouter();
-
-  const [mode, setMode] = useState<"login" | "signup">("login");
 
   const [schoolName, setSchoolName] = useState("");
   const [cnpj, setCnpj] = useState("");
@@ -17,30 +16,6 @@ export default function HomePage() {
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
-  async function handleLogin() {
-    setMessage("");
-
-    if (!email || !password) {
-      setMessage("Preencha e-mail e senha.");
-      return;
-    }
-
-    setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setMessage("E-mail ou senha inválidos.");
-      setLoading(false);
-      return;
-    }
-
-    router.push("/dashboard");
-  }
 
   async function handleSignup() {
     setMessage("");
@@ -109,72 +84,38 @@ export default function HomePage() {
       <div style={cardStyle}>
         <div style={logoStyle}>E</div>
 
-        <h1 style={titleStyle}>Educagenda</h1>
+        <h1 style={titleStyle}>Criar conta</h1>
         <p style={subtitleStyle}>
-          Agenda digital para escolas infantis, professores e responsáveis.
+          Cadastre sua escola para começar a usar o Educagenda.
         </p>
 
-        <div style={tabsStyle}>
-          <button
-            onClick={() => {
-              setMode("login");
-              setMessage("");
-            }}
-            style={{
-              ...tabButtonStyle,
-              background: mode === "login" ? "#2563eb" : "transparent",
-              color: mode === "login" ? "white" : "#374151",
-            }}
-          >
-            Entrar
-          </button>
+        <input
+          type="text"
+          placeholder="Nome da escola"
+          value={schoolName}
+          onChange={(e) => setSchoolName(e.target.value)}
+          style={inputStyle}
+        />
 
-          <button
-            onClick={() => {
-              setMode("signup");
-              setMessage("");
-            }}
-            style={{
-              ...tabButtonStyle,
-              background: mode === "signup" ? "#2563eb" : "transparent",
-              color: mode === "signup" ? "white" : "#374151",
-            }}
-          >
-            Criar conta
-          </button>
-        </div>
+        <input
+          type="text"
+          placeholder="CNPJ da escola"
+          value={cnpj}
+          onChange={(e) => setCnpj(e.target.value)}
+          style={inputStyle}
+        />
 
-        {mode === "signup" && (
-          <>
-            <input
-              type="text"
-              placeholder="Nome da escola"
-              value={schoolName}
-              onChange={(e) => setSchoolName(e.target.value)}
-              style={inputStyle}
-            />
-
-            <input
-              type="text"
-              placeholder="CNPJ da escola"
-              value={cnpj}
-              onChange={(e) => setCnpj(e.target.value)}
-              style={inputStyle}
-            />
-
-            <input
-              type="text"
-              placeholder="Seu nome"
-              value={adminName}
-              onChange={(e) => setAdminName(e.target.value)}
-              style={inputStyle}
-            />
-          </>
-        )}
+        <input
+          type="text"
+          placeholder="Seu nome"
+          value={adminName}
+          onChange={(e) => setAdminName(e.target.value)}
+          style={inputStyle}
+        />
 
         <input
           type="email"
-          placeholder="E-mail"
+          placeholder="E-mail de acesso"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           style={inputStyle}
@@ -189,7 +130,7 @@ export default function HomePage() {
         />
 
         <button
-          onClick={mode === "login" ? handleLogin : handleSignup}
+          onClick={handleSignup}
           disabled={loading}
           style={{
             ...mainButtonStyle,
@@ -197,12 +138,15 @@ export default function HomePage() {
             cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          {loading
-            ? "Aguarde..."
-            : mode === "login"
-            ? "Entrar"
-            : "Criar conta da escola"}
+          {loading ? "Criando..." : "Criar conta da escola"}
         </button>
+
+        <p style={footerTextStyle}>
+          Já tem conta?{" "}
+          <Link href="/login" style={linkStyle}>
+            Entrar
+          </Link>
+        </p>
 
         {message && <p style={messageStyle}>{message}</p>}
       </div>
@@ -224,7 +168,7 @@ const containerStyle = {
 const backgroundStyle = {
   position: "absolute" as const,
   inset: 0,
-  backgroundImage: "url('/criancas-tdah-1024x682.jpg')",
+  backgroundImage: "url('/bg.jpg')",
   backgroundSize: "cover",
   backgroundPosition: "center",
   filter: "blur(10px)",
@@ -242,7 +186,7 @@ const cardStyle = {
   position: "relative" as const,
   zIndex: 2,
   width: "100%",
-  maxWidth: 420,
+  maxWidth: 460,
   background: "rgba(255,255,255,0.92)",
   borderRadius: 24,
   padding: 34,
@@ -275,23 +219,6 @@ const subtitleStyle = {
   lineHeight: 1.4,
 };
 
-const tabsStyle = {
-  display: "flex",
-  background: "#f3f4f6",
-  borderRadius: 14,
-  padding: 4,
-  marginBottom: 20,
-};
-
-const tabButtonStyle = {
-  flex: 1,
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
 const inputStyle = {
   width: "100%",
   padding: 13,
@@ -310,6 +237,18 @@ const mainButtonStyle = {
   color: "white",
   fontWeight: 800,
   fontSize: 15,
+};
+
+const footerTextStyle = {
+  marginTop: 18,
+  color: "#6b7280",
+  fontSize: 14,
+};
+
+const linkStyle = {
+  color: "#2563eb",
+  fontWeight: 800,
+  textDecoration: "none",
 };
 
 const messageStyle = {
