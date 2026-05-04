@@ -9,7 +9,6 @@ export default function CadastroPage() {
   const router = useRouter();
 
   const [schoolName, setSchoolName] = useState("");
-  const [cnpj, setCnpj] = useState("");
   const [adminName, setAdminName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +19,7 @@ export default function CadastroPage() {
   async function handleSignup() {
     setMessage("");
 
-    if (!schoolName || !cnpj || !adminName || !email || !password) {
+    if (!schoolName || !adminName || !email || !password) {
       setMessage("Preencha todos os campos.");
       return;
     }
@@ -44,7 +43,6 @@ export default function CadastroPage() {
       .from("schools")
       .insert({
         name: schoolName,
-        cnpj,
         status: "pending",
         plan: "mensal",
       })
@@ -99,14 +97,6 @@ export default function CadastroPage() {
 
         <input
           type="text"
-          placeholder="CNPJ da escola"
-          value={cnpj}
-          onChange={(e) => setCnpj(e.target.value)}
-          style={inputStyle}
-        />
-
-        <input
-          type="text"
           placeholder="Seu nome"
           value={adminName}
           onChange={(e) => setAdminName(e.target.value)}
@@ -143,7 +133,7 @@ export default function CadastroPage() {
 
         <p style={footerTextStyle}>
           Já tem conta?{" "}
-          <Link href="/login" style={linkStyle}>
+          <Link href="/entrar" style={linkStyle}>
             Entrar
           </Link>
         </p>
@@ -153,6 +143,8 @@ export default function CadastroPage() {
     </div>
   );
 }
+
+/* estilos (mantidos iguais) */
 
 const containerStyle = {
   position: "relative" as const,
@@ -216,7 +208,6 @@ const titleStyle = {
 const subtitleStyle = {
   color: "#6b7280",
   marginBottom: 24,
-  lineHeight: 1.4,
 };
 
 const inputStyle = {
@@ -225,8 +216,6 @@ const inputStyle = {
   borderRadius: 12,
   border: "1px solid #d1d5db",
   marginBottom: 12,
-  fontSize: 14,
-  boxSizing: "border-box" as const,
 };
 
 const mainButtonStyle = {
@@ -236,13 +225,11 @@ const mainButtonStyle = {
   border: "none",
   color: "white",
   fontWeight: 800,
-  fontSize: 15,
 };
 
 const footerTextStyle = {
   marginTop: 18,
   color: "#6b7280",
-  fontSize: 14,
 };
 
 const linkStyle = {
@@ -253,5 +240,4 @@ const linkStyle = {
 
 const messageStyle = {
   marginTop: 14,
-  color: "#374151",
 };
