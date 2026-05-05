@@ -89,7 +89,7 @@ export default function LandingPage() {
     ],
   };
 
-  const depoimentos = [
+ -- const depoimentos = [
     {
       nome: "Carla Mendes",
       cargo: "Diretora pedagógica",
