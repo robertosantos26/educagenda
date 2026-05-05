@@ -1,18 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+type SavedAccess = {
+  email: string;
+  password: string;
+};
+
+const SAVED_ACCESS_KEY = "educagenda_saved_access";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberAccess, setRememberAccess] = useState(false);
+  const [savedAccesses, setSavedAccesses] = useState<SavedAccess[]>([]);
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const rawAccesses = localStorage.getItem(SAVED_ACCESS_KEY);
+
+    if (!rawAccesses) return;
+
+    try {
+      const parsedAccesses = JSON.parse(rawAccesses) as SavedAccess[];
+
+      if (!Array.isArray(parsedAccesses)) return;
+
+      const validAccesses = parsedAccesses.filter(
+        (item) => item?.email && item?.password,
+      );
+
+      setSavedAccesses(validAccesses);
+    } catch {
+      localStorage.removeItem(SAVED_ACCESS_KEY);
+    }
+  }, []);
+
+  function saveAccess(currentEmail: string, currentPassword: string) {
+    const nextAccesses = [
+      { email: currentEmail, password: currentPassword },
+      ...savedAccesses.filter((item) => item.email !== currentEmail),
+    ].slice(0, 5);
+
+    setSavedAccesses(nextAccesses);
+    localStorage.setItem(SAVED_ACCESS_KEY, JSON.stringify(nextAccesses));
+  }
+
+  function handleUseSavedAccess(access: SavedAccess) {
+    setEmail(access.email);
+    setPassword(access.password);
+    setRememberAccess(true);
+    setMessage("");
+  }
 
   async function handleLogin() {
     setMessage("");
@@ -35,6 +81,10 @@ export default function LoginPage() {
       return;
     }
 
+    if (rememberAccess) {
+      saveAccess(email, password);
+    }
+
     router.push("/dashboard");
   }
 
@@ -48,6 +98,24 @@ export default function LoginPage() {
 
         <h1 style={titleStyle}>Educagenda</h1>
         <p style={subtitleStyle}>Acesse sua escola</p>
+
+        {savedAccesses.length > 0 && (
+          <div style={savedAccessContainerStyle}>
+            <p style={savedAccessTitleStyle}>Acessos salvos neste dispositivo</p>
+            <div style={savedAccessListStyle}>
+              {savedAccesses.map((access) => (
+                <button
+                  key={access.email}
+                  type="button"
+                  onClick={() => handleUseSavedAccess(access)}
+                  style={savedAccessButtonStyle}
+                >
+                  {access.email}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <input
           type="email"
@@ -64,6 +132,15 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           style={inputStyle}
         />
+
+        <label style={checkboxLabelStyle}>
+          <input
+            type="checkbox"
+            checked={rememberAccess}
+            onChange={(e) => setRememberAccess(e.target.checked)}
+          />
+          Gravar acesso neste dispositivo
+        </label>
 
         <button
           onClick={handleLogin}
@@ -154,6 +231,33 @@ const subtitleStyle = {
   marginBottom: 24,
 };
 
+const savedAccessContainerStyle = {
+  marginBottom: 12,
+  textAlign: "left" as const,
+};
+
+const savedAccessTitleStyle = {
+  fontSize: 13,
+  color: "#4b5563",
+  margin: "0 0 8px",
+};
+
+const savedAccessListStyle = {
+  display: "flex",
+  flexWrap: "wrap" as const,
+  gap: 8,
+};
+
+const savedAccessButtonStyle = {
+  border: "1px solid #cbd5e1",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  borderRadius: 999,
+  padding: "6px 12px",
+  fontSize: 12,
+  cursor: "pointer",
+};
+
 const inputStyle = {
   width: "100%",
   padding: 13,
@@ -162,6 +266,15 @@ const inputStyle = {
   marginBottom: 12,
   fontSize: 14,
   boxSizing: "border-box" as const,
+};
+
+const checkboxLabelStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  fontSize: 13,
+  color: "#4b5563",
+  marginBottom: 14,
 };
 
 const mainButtonStyle = {
