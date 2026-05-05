@@ -39,10 +39,16 @@ export default function ProfessoresPage() {
   const [links, setLinks] = useState<TeacherClassLink[]>([]);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
 
+  // ✅ FIX: schoolId guardado em estado — getSchoolId() chamado uma única vez
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function getSchoolId() {
+  // ✅ FIX: Uma única chamada ao Supabase para pegar school_id
+  async function fetchSchoolId(): Promise<string | null> {
+    if (schoolId) return schoolId; // já carregado, reutiliza
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -55,41 +61,67 @@ export default function ProfessoresPage() {
       .eq("id", user.id)
       .single();
 
-    return profile?.school_id || null;
+    const id = profile?.school_id || null;
+    setSchoolId(id);
+    return id;
   }
 
-  async function loadClasses() {
-    const schoolId = await getSchoolId();
-    if (!schoolId) return;
-
+  async function loadClasses(sid: string) {
     const { data } = await supabase
       .from("classes")
       .select("id, name")
-      .eq("school_id", schoolId)
+      .eq("school_id", sid)
       .order("name", { ascending: true });
 
     setClasses(data || []);
   }
 
-  async function loadTeachers() {
-    const schoolId = await getSchoolId();
-    if (!schoolId) return;
-
+  async function loadTeachers(sid: string) {
     const { data } = await supabase
       .from("teachers")
       .select("id, name, email, phone, address, admission_date, access_created")
-      .eq("school_id", schoolId)
+      .eq("school_id", sid)
       .order("name", { ascending: true });
 
     setTeachers(data || []);
   }
 
-  async function loadLinks() {
-    const { data } = await supabase
+  // ✅ FIX PRINCIPAL: filtra vínculos apenas das turmas da escola atual
+  // Antes: buscava TODOS os teacher_class_links do banco (sem filtro)
+  // Agora: faz JOIN com classes filtrando por school_id
+  async function loadLinks(sid: string) {
+    const { data, error } = await supabase
       .from("teacher_class_links")
-      .select("teacher_id, class_id");
+      .select("teacher_id, class_id, classes!inner(school_id)")
+      .eq("classes.school_id", sid);
 
-    setLinks(data || []);
+    if (error) {
+      console.error("Erro ao carregar vínculos:", error.message);
+      return;
+    }
+
+    // Remove o campo extra do JOIN antes de salvar no estado
+    const cleaned: TeacherClassLink[] = (data || []).map((item) => ({
+      teacher_id: item.teacher_id,
+      class_id: item.class_id,
+    }));
+
+    setLinks(cleaned);
+  }
+
+  // ✅ FIX: carrega tudo de uma vez com o mesmo school_id
+  async function loadAll() {
+    const sid = await fetchSchoolId();
+    if (!sid) {
+      setMessage("Não encontrei a escola vinculada ao usuário.");
+      return;
+    }
+
+    await Promise.all([
+      loadClasses(sid),
+      loadTeachers(sid),
+      loadLinks(sid),
+    ]);
   }
 
   function resetForm() {
@@ -163,9 +195,9 @@ export default function ProfessoresPage() {
 
     setLoading(true);
 
-    const schoolId = await getSchoolId();
+    const sid = await fetchSchoolId();
 
-    if (!schoolId) {
+    if (!sid) {
       setMessage("Não encontrei a escola vinculada ao usuário.");
       setLoading(false);
       return;
@@ -198,7 +230,7 @@ export default function ProfessoresPage() {
       const { data: teacher, error } = await supabase
         .from("teachers")
         .insert({
-          school_id: schoolId,
+          school_id: sid,
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim() || null,
@@ -243,8 +275,8 @@ export default function ProfessoresPage() {
         : "Professor cadastrado com sucesso."
     );
 
-    await loadTeachers();
-    await loadLinks();
+    await loadTeachers(sid);
+    await loadLinks(sid);
 
     setLoading(false);
   }
@@ -261,10 +293,7 @@ export default function ProfessoresPage() {
 
     const response = await fetch("/api/create-teacher-auth", {
       method: "POST",
-      body: JSON.stringify({
-        teacherId,
-        password,
-      }),
+      body: JSON.stringify({ teacherId, password }),
     });
 
     const result = await response.json();
@@ -276,13 +305,13 @@ export default function ProfessoresPage() {
 
     setMessage("Acesso criado com sucesso.");
     setPasswords((prev) => ({ ...prev, [teacherId]: "" }));
-    await loadTeachers();
+
+    const sid = await fetchSchoolId();
+    if (sid) await loadTeachers(sid);
   }
 
   useEffect(() => {
-    loadClasses();
-    loadTeachers();
-    loadLinks();
+    loadAll();
   }, []);
 
   return (
@@ -302,7 +331,21 @@ export default function ProfessoresPage() {
           </button>
         </div>
 
-        {message && <p style={messageStyle}>{message}</p>}
+        {message && (
+          <p
+            style={{
+              ...messageStyle,
+              color: message.toLowerCase().includes("erro") ? "#dc2626" : "#15803d",
+              background: message.toLowerCase().includes("erro") ? "#fef2f2" : "#f0fdf4",
+              border: `1px solid ${message.toLowerCase().includes("erro") ? "#fecaca" : "#bbf7d0"}`,
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginTop: 14,
+            }}
+          >
+            {message}
+          </p>
+        )}
       </div>
 
       {showForm && (
@@ -373,7 +416,6 @@ export default function ProfessoresPage() {
               <div style={classGridStyle}>
                 {classes.map((item) => {
                   const selected = selectedClasses.includes(item.id);
-
                   return (
                     <button
                       key={item.id}
@@ -439,7 +481,6 @@ export default function ProfessoresPage() {
                   <div style={avatarStyle}>
                     {teacher.name.charAt(0).toUpperCase()}
                   </div>
-
                   <div>
                     <strong style={teacherNameStyle}>👩‍🏫 {teacher.name}</strong>
                     <p style={infoTextStyle}>{teacher.email || "Sem e-mail"}</p>
@@ -447,29 +488,10 @@ export default function ProfessoresPage() {
                 </div>
 
                 <div style={infoBlockStyle}>
-                  <InfoLine
-                    icon="📞"
-                    label="Telefone"
-                    value={teacher.phone || "Não informado"}
-                  />
-
-                  <InfoLine
-                    icon="📍"
-                    label="Endereço"
-                    value={teacher.address || "Não informado"}
-                  />
-
-                  <InfoLine
-                    icon="📅"
-                    label="Admissão"
-                    value={teacher.admission_date || "Não informado"}
-                  />
-
-                  <InfoLine
-                    icon="🏫"
-                    label="Turmas"
-                    value={getTeacherClasses(teacher.id)}
-                  />
+                  <InfoLine icon="📞" label="Telefone" value={teacher.phone || "Não informado"} />
+                  <InfoLine icon="📍" label="Endereço" value={teacher.address || "Não informado"} />
+                  <InfoLine icon="📅" label="Admissão" value={teacher.admission_date || "Não informado"} />
+                  <InfoLine icon="🏫" label="Turmas" value={getTeacherClasses(teacher.id)} />
                 </div>
 
                 <span
@@ -489,14 +511,10 @@ export default function ProfessoresPage() {
                       placeholder="Senha provisória"
                       value={passwords[teacher.id] || ""}
                       onChange={(e) =>
-                        setPasswords({
-                          ...passwords,
-                          [teacher.id]: e.target.value,
-                        })
+                        setPasswords({ ...passwords, [teacher.id]: e.target.value })
                       }
                       style={smallInputStyle}
                     />
-
                     <button
                       onClick={() => createAccess(teacher.id)}
                       style={accessButtonStyle}
@@ -506,10 +524,7 @@ export default function ProfessoresPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={() => openEditForm(teacher)}
-                  style={editButtonStyle}
-                >
+                <button onClick={() => openEditForm(teacher)} style={editButtonStyle}>
                   Ver / editar dados
                 </button>
               </div>
@@ -521,15 +536,7 @@ export default function ProfessoresPage() {
   );
 }
 
-function InfoLine({
-  icon,
-  label,
-  value,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-}) {
+function InfoLine({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div style={infoLineStyle}>
       <span style={iconStyle}>{icon}</span>
@@ -541,229 +548,34 @@ function InfoLine({
   );
 }
 
-const cardStyle = {
-  background: "#ffffff",
-  borderRadius: 18,
-  padding: 28,
-  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
-  marginBottom: 28,
-};
-
-const headerRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 20,
-  flexWrap: "wrap" as const,
-};
-
-const pageTitle = {
-  fontSize: 28,
-  marginBottom: 6,
-};
-
-const subtitle = {
-  color: "#6b7280",
-  marginBottom: 0,
-};
-
-const sectionTitle = {
-  fontSize: 20,
-  marginBottom: 18,
-};
-
-const inputStyle = {
-  display: "block",
-  width: "100%",
-  maxWidth: 520,
-  padding: 12,
-  borderRadius: 10,
-  border: "1px solid #d1d5db",
-  marginBottom: 12,
-  fontSize: 14,
-};
-
-const smallInputStyle = {
-  padding: 10,
-  borderRadius: 10,
-  border: "1px solid #d1d5db",
-  fontSize: 14,
-  width: "100%",
-};
-
-const labelStyle = {
-  fontWeight: 700,
-  marginBottom: 10,
-};
-
-const helpTextStyle = {
-  marginTop: -4,
-  marginBottom: 12,
-  color: "#6b7280",
-  fontSize: 13,
-};
-
-const classGridStyle = {
-  display: "flex",
-  flexWrap: "wrap" as const,
-  gap: 10,
-  marginBottom: 18,
-};
-
-const classButtonStyle = {
-  padding: "10px 14px",
-  borderRadius: 999,
-  border: "1px solid #e5e7eb",
-  cursor: "pointer",
-  fontWeight: 600,
-};
-
-const addButtonStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  padding: "12px 18px",
-  borderRadius: 12,
-  border: "none",
-  background: "#16a34a",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const buttonPrimary = {
-  padding: "12px 18px",
-  borderRadius: 10,
-  border: "none",
-  color: "white",
-  fontWeight: 700,
-};
-
-const buttonSecondary = {
-  padding: "12px 18px",
-  borderRadius: 10,
-  border: "1px solid #d1d5db",
-  background: "white",
-  color: "#374151",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const teachersGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  gap: 18,
-};
-
-const teacherCardStyle = {
-  padding: 20,
-  border: "1px solid #e5e7eb",
-  borderRadius: 18,
-  background: "#ffffff",
-  boxShadow: "0 4px 14px rgba(15, 23, 42, 0.05)",
-};
-
-const teacherHeaderStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 14,
-  marginBottom: 18,
-};
-
-const avatarStyle = {
-  width: 48,
-  height: 48,
-  borderRadius: 16,
-  background: "#dcfce7",
-  color: "#15803d",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 800,
-  fontSize: 20,
-};
-
-const teacherNameStyle = {
-  fontSize: 18,
-  display: "block",
-};
-
-const infoTextStyle = {
-  margin: "6px 0 0",
-  color: "#6b7280",
-};
-
-const infoBlockStyle = {
-  display: "grid",
-  gap: 12,
-  marginBottom: 16,
-};
-
-const infoLineStyle = {
-  display: "flex",
-  gap: 10,
-  alignItems: "flex-start",
-};
-
-const iconStyle = {
-  width: 24,
-};
-
-const infoLabelStyle = {
-  margin: 0,
-  color: "#6b7280",
-  fontSize: 12,
-  fontWeight: 700,
-  textTransform: "uppercase" as const,
-};
-
-const infoValueStyle = {
-  margin: "3px 0 0",
-  color: "#111827",
-  fontSize: 14,
-};
-
-const statusBadgeStyle = {
-  display: "inline-block",
-  padding: "7px 10px",
-  borderRadius: 999,
-  fontWeight: 700,
-  fontSize: 13,
-  marginBottom: 14,
-};
-
-const accessBoxStyle = {
-  display: "grid",
-  gap: 10,
-  marginBottom: 12,
-};
-
-const accessButtonStyle = {
-  padding: "10px 14px",
-  borderRadius: 10,
-  border: "none",
-  background: "#111827",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const editButtonStyle = {
-  width: "100%",
-  padding: "10px 14px",
-  borderRadius: 10,
-  border: "none",
-  background: "#eff6ff",
-  color: "#2563eb",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const messageStyle = {
-  marginTop: 14,
-  color: "#374151",
-};
-
-const emptyStyle = {
-  color: "#6b7280",
-};
+const cardStyle = { background: "#ffffff", borderRadius: 18, padding: 28, boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)", marginBottom: 28 };
+const headerRowStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20, flexWrap: "wrap" as const };
+const pageTitle = { fontSize: 28, marginBottom: 6 };
+const subtitle = { color: "#6b7280", marginBottom: 0 };
+const sectionTitle = { fontSize: 20, marginBottom: 18 };
+const inputStyle = { display: "block", width: "100%", maxWidth: 520, padding: 12, borderRadius: 10, border: "1px solid #d1d5db", marginBottom: 12, fontSize: 14 };
+const smallInputStyle = { padding: 10, borderRadius: 10, border: "1px solid #d1d5db", fontSize: 14, width: "100%" };
+const labelStyle = { fontWeight: 700, marginBottom: 10 };
+const helpTextStyle = { marginTop: -4, marginBottom: 12, color: "#6b7280", fontSize: 13 };
+const classGridStyle = { display: "flex", flexWrap: "wrap" as const, gap: 10, marginBottom: 18 };
+const classButtonStyle = { padding: "10px 14px", borderRadius: 999, border: "1px solid #e5e7eb", cursor: "pointer", fontWeight: 600 };
+const addButtonStyle = { display: "flex", alignItems: "center", gap: 8, padding: "12px 18px", borderRadius: 12, border: "none", background: "#16a34a", color: "white", cursor: "pointer", fontWeight: 700 };
+const buttonPrimary = { padding: "12px 18px", borderRadius: 10, border: "none", color: "white", fontWeight: 700 };
+const buttonSecondary = { padding: "12px 18px", borderRadius: 10, border: "1px solid #d1d5db", background: "white", color: "#374151", cursor: "pointer", fontWeight: 700 };
+const teachersGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18 };
+const teacherCardStyle = { padding: 20, border: "1px solid #e5e7eb", borderRadius: 18, background: "#ffffff", boxShadow: "0 4px 14px rgba(15, 23, 42, 0.05)" };
+const teacherHeaderStyle = { display: "flex", alignItems: "center", gap: 14, marginBottom: 18 };
+const avatarStyle = { width: 48, height: 48, borderRadius: 16, background: "#dcfce7", color: "#15803d", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 20 };
+const teacherNameStyle = { fontSize: 18, display: "block" };
+const infoTextStyle = { margin: "6px 0 0", color: "#6b7280" };
+const infoBlockStyle = { display: "grid", gap: 12, marginBottom: 16 };
+const infoLineStyle = { display: "flex", gap: 10, alignItems: "flex-start" };
+const iconStyle = { width: 24 };
+const infoLabelStyle = { margin: 0, color: "#6b7280", fontSize: 12, fontWeight: 700, textTransform: "uppercase" as const };
+const infoValueStyle = { margin: "3px 0 0", color: "#111827", fontSize: 14 };
+const statusBadgeStyle = { display: "inline-block", padding: "7px 10px", borderRadius: 999, fontWeight: 700, fontSize: 13, marginBottom: 14 };
+const accessBoxStyle = { display: "grid", gap: 10, marginBottom: 12 };
+const accessButtonStyle = { padding: "10px 14px", borderRadius: 10, border: "none", background: "#111827", color: "white", cursor: "pointer", fontWeight: 700 };
+const editButtonStyle = { width: "100%", padding: "10px 14px", borderRadius: 10, border: "none", background: "#eff6ff", color: "#2563eb", cursor: "pointer", fontWeight: 700 };
+const messageStyle = { marginTop: 14, color: "#374151" };
+const emptyStyle = { color: "#6b7280" };
