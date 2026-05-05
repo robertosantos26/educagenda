@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -88,30 +87,6 @@ export default function LandingPage() {
       { icone: "💬", titulo: "Canal direto com o professor", desc: "Tire dúvidas e troque mensagens sem precisar ligar para a escola." },
     ],
   };
-
-  const depoimentos = [
-    {
-      nome: "Carla Mendes",
-      cargo: "Diretora pedagógica",
-      escola: "Escola Primeiros Passos – Caxias do Sul",
-      texto: "Antes a gente controlava tudo em caderno e WhatsApp. Hoje cada professor registra no app e os pais acompanham na hora. A diferença é gigante.",
-      inicial: "C",
-    },
-    {
-      nome: "Rafaela Souza",
-      cargo: "Coordenadora",
-      escola: "CEI Girassol – Porto Alegre",
-      texto: "A comunicação com os pais melhorou muito. Eles ficam mais tranquilos porque conseguem acompanhar a rotina do filho durante o dia.",
-      inicial: "R",
-    },
-    {
-      nome: "Marcos Antônio",
-      cargo: "Proprietário",
-      escola: "Cantinho Feliz – Gramado",
-      texto: "Implantamos em dois dias. A equipe de suporte ajudou em tudo. Os professores adoraram porque é simples de usar no celular.",
-      inicial: "M",
-    },
-  ];
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: "#f8faff", color: "#0f172a", overflowX: "hidden" }}>
@@ -220,16 +195,6 @@ export default function LandingPage() {
         }
         .benefit-card:hover { border-color: #93c5fd; box-shadow: 0 8px 24px rgba(37,99,235,0.08); transform: translateY(-2px); }
 
-        .testimonial-card {
-          background: white;
-          border-radius: 20px;
-          padding: 28px;
-          border: 1px solid #e2e8f0;
-          flex: 1;
-          min-width: 240px;
-          max-width: 360px;
-        }
-
         .toggle-track {
           width: 44px; height: 24px;
           background: #cbd5e1;
@@ -275,7 +240,6 @@ export default function LandingPage() {
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
             <a href="#beneficios" className="nav-link">Funcionalidades</a>
             <a href="#planos" className="nav-link">Planos</a>
-            <a href="#depoimentos" className="nav-link">Depoimentos</a>
             <a href="/entrar" className="btn-outline" style={{ padding: "8px 18px", fontSize: 14 }}>Entrar</a>
             <a href="/cadastro" className="btn-primary" style={{ padding: "9px 20px", fontSize: 14 }}>Teste grátis</a>
           </div>
@@ -326,15 +290,6 @@ export default function LandingPage() {
               Sem cartão de crédito · Cancele quando quiser · Suporte em português
             </p>
 
-            {/* Social proof numbers */}
-            <div style={{ display: "flex", gap: 32, marginTop: 48, flexWrap: "wrap" }}>
-              {[["500+", "escolas ativas"], ["12 mil+", "alunos cadastrados"], ["98%", "satisfação dos pais"]].map(([n, l]) => (
-                <div key={l}>
-                  <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: 26, color: "#0f172a" }}>{n}</div>
-                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{l}</div>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Right column – floating UI mockup */}
@@ -379,18 +334,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* ── LOGOS / PROVA ── */}
-      <div style={{ background: "white", borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9", padding: "20px 24px" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
-          <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 16, fontWeight: 500 }}>Utilizado por escolas em todo o Rio Grande do Sul</p>
-          <div style={{ display: "flex", gap: 40, justifyContent: "center", flexWrap: "wrap", alignItems: "center" }}>
-            {["CEI Girassol", "Primeiros Passos", "Cantinho Feliz", "Jardim Encantado", "Escola das Artes"].map(n => (
-              <span key={n} style={{ fontSize: 14, fontWeight: 700, color: "#cbd5e1", letterSpacing: 1 }}>{n}</span>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* ── BENEFÍCIOS ── */}
       <section id="beneficios" style={{ padding: "100px 24px", maxWidth: 1100, margin: "0 auto" }}>
@@ -518,34 +461,6 @@ export default function LandingPage() {
             Precisa de proposta customizada?{" "}
             <a href="https://wa.me/5554992700054" style={{ color: "#2563eb", fontWeight: 600, textDecoration: "none" }}>Fale com a gente pelo WhatsApp →</a>
           </p>
-        </div>
-      </section>
-
-      {/* ── DEPOIMENTOS ── */}
-      <section id="depoimentos" style={{ padding: "100px 24px", background: "white" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <p style={{ color: "#2563eb", fontWeight: 600, fontSize: 14, marginBottom: 12 }}>Depoimentos</p>
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: "clamp(28px, 4vw, 42px)", color: "#0f172a" }}>
-              O que as escolas dizem
-            </h2>
-          </div>
-
-          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
-            {depoimentos.map((d) => (
-              <div key={d.nome} className="testimonial-card">
-                <div style={{ fontSize: 28, color: "#bfdbfe", marginBottom: 16 }}>"</div>
-                <p style={{ fontSize: 15, color: "#374151", lineHeight: 1.7, marginBottom: 24 }}>{d.texto}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#dbeafe", color: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 16 }}>{d.inicial}</div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: "#0f172a" }}>{d.nome}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{d.cargo} · {d.escola}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
